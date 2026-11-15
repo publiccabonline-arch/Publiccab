@@ -1,0 +1,3167 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#FACC15" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Public Cab" />
+  <title>Public Cab - Cab, Ambulance & Parcel Service</title>
+
+  <!-- Preconnect for Faster Loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://unpkg.com" crossorigin />
+
+  <!-- Dynamic Favicon, Apple Touch Icon & PWA Manifest -->
+  <link id="dynamic-favicon" rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3097/3097180.png" />
+  <link id="dynamic-apple-icon" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3097/3097180.png" />
+  <link id="dynamic-manifest" rel="manifest" href="" />
+
+  <!-- Google Fonts: Inter & Hind Siliguri -->
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'Hind Siliguri', 'sans-serif'] },
+          colors: {
+            brandYellow: '#FACC15',
+            brandYellowDark: '#EAB308',
+            appBg: '#111111',
+            cardBg: '#1C1C1E',
+            cardBorder: '#2C2C2E',
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Leaflet.js CSS & JS for Live GPS Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- jsPDF for Driver Details PDF Download -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Firebase Compat SDK v10 (App + Realtime Database) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      background-color: #111111;
+      color: #F3F4F6;
+      font-family: 'Inter', 'Hind Siliguri', sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+    }
+    input, textarea, select { user-select: text; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #111111; }
+    ::-webkit-scrollbar-thumb { background: #333333; border-radius: 9999px; }
+
+    .leaflet-container { background: #E5E3DF; z-index: 1; font-family: 'Inter', sans-serif; }
+    .leaflet-control-attribution { display: none !important; }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 0.9; }
+      70% { transform: scale(2.2); opacity: 0; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    .gps-pulse::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 9999px;
+      background-color: #10B981;
+      animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    @keyframes popCheck {
+      0% { transform: scale(0.3); opacity: 0; }
+      60% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-check { animation: popCheck 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+    @keyframes splashZoom {
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-splash-logo { animation: splashZoom 0.5s ease-out forwards; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col max-w-md mx-auto relative shadow-2xl border-x border-neutral-900">
+
+  <!-- ==================== FAST COMPANY LOGO SPLASH SCREEN ==================== -->
+  <div id="company-splash-screen" class="fixed inset-0 bg-[#111111] z-[100] flex flex-col items-center justify-center p-6 max-w-md mx-auto transition-opacity duration-300">
+    <div class="animate-splash-logo flex flex-col items-center text-center space-y-4">
+      <div class="w-24 h-24 rounded-3xl bg-brandYellow p-1.5 shadow-2xl border-4 border-brandYellow/40 overflow-hidden flex items-center justify-center">
+        <img id="splash-company-logo" src="https://cdn-icons-png.flaticon.com/512/3097/3097180.png" alt="Public Cab Company Logo" class="w-full h-full object-cover rounded-2xl" />
+      </div>
+      <div>
+        <h1 class="text-3xl font-black tracking-tight text-brandYellow">PUBLIC CAB</h1>
+        <p class="text-xs font-bold text-neutral-300 mt-1">Cab • 24/7 Emergency Ambulance • Parcel</p>
+      </div>
+      <div class="w-36 h-1.5 bg-neutral-800 rounded-full overflow-hidden mt-2">
+        <div class="h-full bg-brandYellow animate-pulse w-full"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOP VIBRANT YELLOW HEADER ==================== -->
+  <header class="bg-brandYellow text-neutral-950 px-3.5 py-2.5 sticky top-0 z-40 shadow-md">
+    <div class="flex items-center justify-between gap-2">
+      <!-- Left: Company Logo & Brand Name (15 Taps anywhere here opens Admin Login) -->
+      <div id="brand-admin-trigger" style="touch-action: manipulation;" class="flex items-center gap-2.5 min-w-0 cursor-pointer select-none active:opacity-80">
+        <div class="w-11 h-11 rounded-full bg-neutral-950 flex items-center justify-center shrink-0 overflow-hidden border-2 border-neutral-900 shadow">
+          <img id="header-logo-img" src="https://cdn-icons-png.flaticon.com/512/3097/3097180.png" alt="Public Cab Logo" class="w-full h-full object-cover" />
+        </div>
+        <div class="min-w-0">
+          <h1 class="font-extrabold text-[17px] leading-tight tracking-tight text-neutral-950 whitespace-nowrap">
+            Public Cab
+          </h1>
+          <p id="header-mode-subtitle" class="text-[11px] font-semibold text-neutral-800 leading-tight whitespace-nowrap">
+            Customer Mode
+          </p>
+        </div>
+      </div>
+
+      <!-- Right: Customer | Driver Pill Switch -->
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="bg-neutral-950 p-1 rounded-full flex items-center shadow-inner">
+          <button id="mode-btn-customer" onclick="switchAppMode('customer')"
+            class="px-3.5 py-1.5 rounded-full text-xs font-extrabold transition bg-brandYellow text-neutral-950">
+            Customer
+          </button>
+          <button id="mode-btn-driver" onclick="switchAppMode('driver')"
+            class="px-3.5 py-1.5 rounded-full text-xs font-extrabold transition text-neutral-200 hover:text-white">
+            Driver
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== STATUS SUB-BAR ==================== -->
+  <div class="bg-[#181818] border-b border-neutral-800 px-3.5 py-1.5 flex items-center justify-between text-[11px] font-semibold z-30">
+    <div id="cab-service-status" class="flex items-center gap-1.5 text-emerald-400">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+      <span>Cab Service: Open 24 Hours</span>
+    </div>
+    <div class="text-rose-400 font-bold flex items-center gap-1">
+      <i class="fa-solid fa-truck-medical text-[10px]"></i>
+      <span>Ambulance: 24/7</span>
+    </div>
+  </div>
+
+  <!-- ==================== 1-CLICK PWA APP INSTALL BANNER WITH COMPANY LOGO ==================== -->
+  <div id="pwa-install-banner" class="bg-neutral-900 border-b border-brandYellow/40 px-3.5 py-2 flex items-center justify-between gap-2.5">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-9 h-9 rounded-xl bg-brandYellow text-neutral-950 flex items-center justify-center shrink-0 overflow-hidden shadow border border-brandYellow">
+        <img id="install-banner-logo" src="https://cdn-icons-png.flaticon.com/512/3097/3097180.png" alt="Public Cab App" class="w-full h-full object-cover" />
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-extrabold text-white truncate">Install Public Cab App</p>
+        <p class="text-[10px] text-neutral-400 truncate">অফিসিয়াল লোগো সহ হোম স্ক্রিনে দ্রুত ইনস্টল করুন</p>
+      </div>
+    </div>
+    <button onclick="triggerPWAInstall()"
+      class="bg-brandYellow hover:bg-brandYellowDark text-neutral-950 font-black text-xs px-3.5 py-2 rounded-xl shadow active:scale-95 transition shrink-0 flex items-center gap-1.5">
+      <i class="fa-solid fa-download"></i>
+      <span>Install App</span>
+    </button>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+  <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 w-[92%] max-w-sm z-50 pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- ==================== MAIN SCROLLABLE CONTENT ==================== -->
+  <main class="flex-1 pb-24 px-3.5 pt-3 space-y-3.5">
+
+    <!-- ADMIN ADVERTISEMENT POSTER & LINK BANNER -->
+    <div id="customer-ad-banner" class="hidden bg-cardBg border border-cardBorder rounded-2xl overflow-hidden shadow-lg">
+      <a id="ad-banner-link" href="#" target="_blank" rel="noopener noreferrer" class="block">
+        <img id="ad-banner-img" src="" alt="Promotion" class="w-full max-h-36 object-cover hidden" />
+        <div class="px-3.5 py-2 flex items-center justify-between bg-gradient-to-r from-neutral-900 to-neutral-800">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="bg-brandYellow text-neutral-950 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Sponsored</span>
+            <span id="ad-banner-title" class="text-xs font-bold text-white truncate">Visit Official Partner</span>
+          </div>
+          <i class="fa-solid fa-arrow-up-right-from-square text-brandYellow text-xs shrink-0"></i>
+        </div>
+      </a>
+    </div>
+
+    <!-- ================================================================ -->
+    <!--                       CUSTOMER MODE VIEWS                        -->
+    <!-- ================================================================ -->
+    <section id="customer-mode-section" class="space-y-3.5">
+
+      <!-- TAB 1: HOME (CAB BOOKING) -->
+      <div id="cust-tab-home" class="space-y-3.5">
+        <!-- Customer Profile Card -->
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-3.5 flex items-center justify-between shadow">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 rounded-full bg-neutral-900 border border-brandYellow/50 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-user text-brandYellow text-base"></i>
+            </div>
+            <div class="min-w-0">
+              <h2 id="cust-display-name" class="font-bold text-sm text-white truncate">Joy Roy</h2>
+              <p id="cust-display-phone" class="text-xs text-neutral-400 truncate">08343088730</p>
+            </div>
+          </div>
+          <button onclick="openCustomerEditModal()"
+            class="bg-brandYellow hover:bg-brandYellowDark text-neutral-950 font-extrabold text-xs px-4 py-2 rounded-xl shadow active:scale-95 transition">
+            Edit
+          </button>
+        </div>
+
+        <!-- ACTIVE RIDE TRACKING CARD (LIVE DRIVER DETAILS + PHONE + CALL + CANCEL) -->
+        <div id="cust-active-ride-card" class="hidden bg-cardBg border-2 border-brandYellow rounded-2xl p-4 space-y-3 shadow-xl">
+          <div class="flex items-center justify-between">
+            <span id="cust-ride-status-badge" class="bg-brandYellow/20 text-brandYellow text-xs font-extrabold px-2.5 py-1 rounded-full">
+              ড্রাইভার খোঁজা হচ্ছে...
+            </span>
+            <span id="cust-ride-category-badge" class="text-xs font-bold text-neutral-300 uppercase">BIKE</span>
+          </div>
+
+          <div class="bg-neutral-900/90 rounded-xl p-3 space-y-2 text-xs">
+            <div class="flex items-start gap-2">
+              <i class="fa-solid fa-circle-dot text-emerald-400 mt-0.5"></i>
+              <p id="cust-ride-pickup-text" class="text-neutral-200 line-clamp-1">Pickup location</p>
+            </div>
+            <div class="flex items-start gap-2">
+              <i class="fa-solid fa-location-dot text-rose-500 mt-0.5"></i>
+              <p id="cust-ride-drop-text" class="text-neutral-200 line-clamp-1">Drop location</p>
+            </div>
+            <div class="pt-1 border-t border-neutral-800 flex justify-between font-bold text-brandYellow">
+              <span id="cust-ride-dist-text">Distance: 0 km</span>
+              <span id="cust-ride-fare-text">Fare: ₹0</span>
+            </div>
+          </div>
+
+          <!-- Assigned Driver Details + Phone Number + OTP + Live ETA -->
+          <div id="cust-assigned-driver-box" class="hidden bg-neutral-900 border border-emerald-500/40 rounded-xl p-3 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <img id="cust-drv-photo" src="https://placehold.co/80x80/1E1E1E/FACC15?text=Driver" class="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 shrink-0" />
+                <div class="min-w-0">
+                  <h4 id="cust-drv-name" class="font-extrabold text-sm text-white truncate">Driver Name</h4>
+                  <p id="cust-drv-vehicle" class="text-xs font-bold text-brandYellow truncate">WB-00-XX-0000</p>
+                  <p id="cust-drv-phone" class="text-xs font-bold text-emerald-400 truncate">0000000000</p>
+                </div>
+              </div>
+              <a id="cust-drv-call-btn" href="tel:" class="px-3.5 py-2.5 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs flex items-center gap-1.5 shadow shrink-0">
+                <i class="fa-solid fa-phone"></i> Call
+              </a>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-center bg-neutral-950 rounded-lg p-2">
+              <div>
+                <p class="text-[10px] text-neutral-400 uppercase font-bold">Driver Arriving In</p>
+                <p id="cust-drv-eta" class="text-sm font-black text-emerald-400">~4 mins</p>
+              </div>
+              <div class="border-l border-neutral-800">
+                <p class="text-[10px] text-neutral-400 uppercase font-bold">Trip Duration</p>
+                <p id="cust-trip-eta" class="text-sm font-black text-brandYellow">~12 mins</p>
+              </div>
+            </div>
+
+            <div id="cust-otp-banner" class="bg-brandYellow/15 border border-brandYellow rounded-lg p-2.5 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-bold text-brandYellow">PICKUP OTP (ড্রাইভারকে বলুন)</p>
+                <p class="text-[10px] text-neutral-400">রাইড শুরু করার আগে OTP দিন</p>
+              </div>
+              <span id="cust-ride-otp" class="text-xl font-black tracking-widest bg-brandYellow text-neutral-950 px-3 py-1 rounded-lg">
+                1234
+              </span>
+            </div>
+          </div>
+
+          <button id="cust-cancel-ride-btn" onclick="customerCancelRide()"
+            class="w-full py-2.5 rounded-xl bg-rose-600/20 border border-rose-500/50 text-rose-400 font-bold text-xs hover:bg-rose-600 hover:text-white transition">
+            Cancel Booking
+          </button>
+        </div>
+
+        <!-- LIVE HIGH-PRECISION GPS MAP CONTAINER -->
+        <div class="relative rounded-2xl overflow-hidden border border-cardBorder shadow-lg h-56 bg-neutral-900">
+          <div id="main-map" class="w-full h-full"></div>
+
+          <div class="absolute top-3 left-3 z-20 bg-neutral-950/90 backdrop-blur border border-neutral-800 px-3 py-1.5 rounded-full flex items-center gap-2 shadow">
+            <span class="relative w-2.5 h-2.5 rounded-full bg-emerald-400 gps-pulse"></span>
+            <span id="gps-accuracy-badge" class="text-[11px] font-bold text-brandYellow">GPS Live Active</span>
+          </div>
+
+          <button onclick="locateUserGPS(true)" title="Recenter Current Location"
+            class="absolute bottom-3 right-3 z-20 w-10 h-10 rounded-full bg-neutral-950 text-brandYellow border border-neutral-800 flex items-center justify-center shadow-lg active:scale-90 transition">
+            <i class="fa-solid fa-crosshairs text-base"></i>
+          </button>
+        </div>
+
+        <!-- PICKUP & DROP LOCATION SEARCH CARD (ALL INDIA) -->
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-3 space-y-2.5 shadow relative">
+          <!-- Pickup Input -->
+          <div class="relative">
+            <div class="flex items-center gap-2.5 bg-neutral-900/90 border border-neutral-800 focus-within:border-emerald-400 rounded-xl px-3 py-2.5">
+              <i class="fa-solid fa-circle-dot text-emerald-400 text-sm shrink-0"></i>
+              <input id="cab-pickup-input" type="text" placeholder="Current GPS or search pickup in India..."
+                oninput="handleLocationSearch(this.value, 'cab-pickup')"
+                class="bg-transparent text-xs font-semibold text-white w-full focus:outline-none placeholder-neutral-500" />
+              <button onclick="useCurrentGPSForField('cab-pickup')" title="Use Current GPS"
+                class="text-emerald-400 hover:text-emerald-300 text-xs font-bold shrink-0 px-2 py-0.5 rounded bg-emerald-500/10">
+                GPS
+              </button>
+            </div>
+            <div id="cab-pickup-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto divide-y divide-neutral-800"></div>
+          </div>
+
+          <!-- Drop Input -->
+          <div class="relative">
+            <div class="flex items-center gap-2.5 bg-neutral-900/90 border border-neutral-800 focus-within:border-brandYellow rounded-xl px-3 py-2.5">
+              <i class="fa-solid fa-location-dot text-rose-500 text-sm shrink-0"></i>
+              <input id="cab-drop-input" type="text" placeholder="Where to? Search any place in India..."
+                oninput="handleLocationSearch(this.value, 'cab-drop')"
+                class="bg-transparent text-xs font-semibold text-white w-full focus:outline-none placeholder-neutral-500" />
+              <button onclick="useCurrentGPSForField('cab-drop')" title="Use Current GPS"
+                class="text-brandYellow hover:text-yellow-300 text-xs font-bold shrink-0 px-2 py-0.5 rounded bg-brandYellow/10">
+                GPS
+              </button>
+            </div>
+            <div id="cab-drop-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto divide-y divide-neutral-800"></div>
+          </div>
+        </div>
+
+        <!-- VEHICLE SELECTION & EXACT KM FARE CALCULATION -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between px-1">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-400">Select Vehicle</span>
+            <span id="cab-distance-label" class="text-xs font-extrabold text-brandYellow">Distance: 0.0 km</span>
+          </div>
+
+          <div id="vehicle-grid" class="grid grid-cols-3 gap-2"></div>
+
+          <button id="book-cab-btn" onclick="submitCabBooking()"
+            class="w-full py-3.5 rounded-2xl bg-brandYellow hover:bg-brandYellowDark text-neutral-950 font-black text-sm tracking-wide shadow-lg active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bolt"></i>
+            <span id="book-cab-btn-text">BOOK BIKE NOW • ₹40</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 2: AMBULANCE (24/7 EMERGENCY BOOKING) -->
+      <div id="cust-tab-ambulance" class="hidden space-y-3.5">
+        <div class="bg-rose-950/40 border border-rose-500/40 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <span class="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">24/7 Emergency</span>
+            <h2 class="text-base font-extrabold text-white mt-1">Emergency Ambulance</h2>
+            <p class="text-xs text-rose-200/80">Instant dispatch • Never closes</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-500 text-2xl">
+            <i class="fa-solid fa-truck-medical"></i>
+          </div>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-3.5 space-y-3 shadow">
+          <div class="relative">
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Patient Pickup Location (Auto GPS)</label>
+            <div class="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5">
+              <i class="fa-solid fa-circle-dot text-emerald-400 text-sm"></i>
+              <input id="amb-pickup-input" type="text" placeholder="Detecting current GPS..."
+                oninput="handleLocationSearch(this.value, 'amb-pickup')"
+                class="bg-transparent text-xs font-semibold text-white w-full focus:outline-none" />
+              <button onclick="useCurrentGPSForField('amb-pickup')" class="text-emerald-400 text-xs font-bold px-2 py-0.5 bg-emerald-500/10 rounded">GPS</button>
+            </div>
+            <div id="amb-pickup-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl z-30 max-h-44 overflow-y-auto"></div>
+          </div>
+
+          <div class="relative">
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Destination / Hospital Location</label>
+            <div class="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5">
+              <i class="fa-solid fa-hospital text-rose-500 text-sm"></i>
+              <input id="amb-drop-input" type="text" placeholder="Search hospital or drop address in India..."
+                oninput="handleLocationSearch(this.value, 'amb-drop')"
+                class="bg-transparent text-xs font-semibold text-white w-full focus:outline-none" />
+            </div>
+            <div id="amb-drop-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl z-30 max-h-44 overflow-y-auto"></div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Hospital Name *</label>
+            <input id="amb-hospital-name" type="text" placeholder="e.g., Apollo Hospital / District Hospital"
+              class="w-full bg-neutral-900 border border-neutral-800 focus:border-rose-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Patient Condition / Problem *</label>
+            <textarea id="amb-patient-problem" rows="2" placeholder="Describe emergency (e.g., Cardiac, Accident, Oxygen needed)..."
+              class="w-full bg-neutral-900 border border-neutral-800 focus:border-rose-500 rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none"></textarea>
+          </div>
+
+          <div class="flex items-center justify-between bg-neutral-900/80 px-3 py-2 rounded-xl border border-neutral-800">
+            <span id="amb-distance-text" class="text-xs font-bold text-neutral-400">Distance: 0.0 km</span>
+            <span id="amb-fare-text" class="text-sm font-black text-rose-400">Est. Fare: ₹300</span>
+          </div>
+
+          <button onclick="submitAmbulanceBooking()"
+            class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-sm tracking-wide shadow-lg active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-truck-medical"></i>
+            <span>DISPATCH AMBULANCE 24/7</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 3: PARCEL BOOKING (BROADCAST TO ALL DRIVERS) -->
+      <div id="cust-tab-parcel" class="hidden space-y-3.5">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold text-brandYellow">All-Vehicle Parcel Delivery</h2>
+            <p class="text-xs text-neutral-400">Sent to all active drivers • Both locations support 1-tap GPS</p>
+          </div>
+          <div class="w-11 h-11 rounded-2xl bg-brandYellow/15 border border-brandYellow/40 flex items-center justify-center text-brandYellow text-xl">
+            <i class="fa-solid fa-box-open"></i>
+          </div>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-3.5 space-y-3 shadow">
+          <div class="relative">
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Parcel Pickup Location</label>
+            <div class="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2">
+              <i class="fa-solid fa-circle-dot text-emerald-400 text-sm"></i>
+              <input id="parcel-pickup-input" type="text" placeholder="Search pickup or tap Current GPS..."
+                oninput="handleLocationSearch(this.value, 'parcel-pickup')"
+                class="bg-transparent text-xs font-semibold text-white w-full focus:outline-none" />
+              <button onclick="useCurrentGPSForField('parcel-pickup')"
+                class="bg-emerald-500 text-neutral-950 font-extrabold text-[11px] px-2.5 py-1.5 rounded-lg shrink-0 flex items-center gap-1 active:scale-95">
+                <i class="fa-solid fa-location-crosshairs"></i> Current GPS
+              </button>
+            </div>
+            <div id="parcel-pickup-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl z-30 max-h-44 overflow-y-auto"></div>
+          </div>
+
+          <div class="relative">
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Parcel Drop Location</label>
+            <div class="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2">
+              <i class="fa-solid fa-location-dot text-rose-500 text-sm"></i>
+              <input id="parcel-drop-input" type="text" placeholder="Search drop or tap Current GPS..."
+                oninput="handleLocationSearch(this.value, 'parcel-drop')"
+                class="bg-transparent text-xs font-semibold text-white w-full focus:outline-none" />
+              <button onclick="useCurrentGPSForField('parcel-drop')"
+                class="bg-brandYellow text-neutral-950 font-extrabold text-[11px] px-2.5 py-1.5 rounded-lg shrink-0 flex items-center gap-1 active:scale-95">
+                <i class="fa-solid fa-location-crosshairs"></i> Current GPS
+              </button>
+            </div>
+            <div id="parcel-drop-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl z-30 max-h-44 overflow-y-auto"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Preferred Vehicle</label>
+              <input id="parcel-vehicle-req" type="text" placeholder="e.g., Bike / Toto / Lorry"
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brandYellow" />
+            </div>
+            <div>
+              <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Approx Weight (kg)</label>
+              <input id="parcel-weight" type="text" placeholder="e.g., 5 kg / 200 kg"
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brandYellow" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">What is inside the Parcel? *</label>
+            <input id="parcel-item-desc" type="text" placeholder="e.g., Electronics box, Documents, Groceries..."
+              class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brandYellow" />
+          </div>
+
+          <div class="flex items-center justify-between bg-neutral-900/80 px-3 py-2 rounded-xl border border-neutral-800">
+            <span id="parcel-distance-text" class="text-xs font-bold text-neutral-400">Distance: 0.0 km</span>
+            <span id="parcel-fare-text" class="text-sm font-black text-brandYellow">Est. Fare: ₹40</span>
+          </div>
+
+          <button onclick="submitParcelBooking()"
+            class="w-full py-3.5 rounded-2xl bg-brandYellow hover:bg-brandYellowDark text-neutral-950 font-black text-sm tracking-wide shadow-lg active:scale-[0.98] transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>SEND PARCEL TO ALL DRIVERS</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 4: SERVICES -->
+      <div id="cust-tab-services" class="hidden space-y-3.5">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-extrabold text-brandYellow">Service Provider Portal</h2>
+            <p class="text-xs text-neutral-400 mt-0.5">Mechanics & Local Shops (Launching Soon)</p>
+          </div>
+          <button onclick="showToast('Mechanics & Local Shops module will launch in the next phase!', 'info')"
+            class="bg-brandYellow text-neutral-950 font-extrabold text-xs px-4 py-2 rounded-xl shadow">
+            Register
+          </button>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-1.5 grid grid-cols-2 gap-1.5">
+          <button class="bg-brandYellow text-neutral-950 font-extrabold text-xs py-2.5 rounded-xl">Shop</button>
+          <button onclick="showToast('Mechanic directory coming soon!', 'info')" class="text-neutral-300 font-bold text-xs py-2.5 rounded-xl">Mechanic</button>
+        </div>
+
+        <div class="py-12 text-center text-xs text-neutral-500 font-medium">
+          No providers registered yet. Cab, Ambulance & Parcel services are live now!
+        </div>
+      </div>
+
+      <!-- TAB 5: SUPPORT -->
+      <div id="cust-tab-support" class="hidden space-y-3.5">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-3">
+          <h2 class="text-base font-extrabold text-brandYellow flex items-center gap-2">
+            <i class="fa-solid fa-headset"></i> Public Cab 24/7 Support
+          </h2>
+          <p class="text-xs text-neutral-300 leading-relaxed">
+            Need help with a ride, parcel delivery, or emergency ambulance? Contact our support desk directly on WhatsApp.
+          </p>
+          <a id="support-whatsapp-btn" href="https://wa.me/917876482555" target="_blank"
+            class="w-full py-3 rounded-xl bg-emerald-500 text-neutral-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow">
+            <i class="fa-brands fa-whatsapp text-base"></i> Chat with Support on WhatsApp
+          </a>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================================================================ -->
+    <!--                        DRIVER MODE VIEWS                         -->
+    <!-- ================================================================ -->
+    <section id="driver-mode-section" class="hidden space-y-3.5">
+
+      <!-- DRIVER AUTH (LOGIN / REGISTRATION) -->
+      <div id="driver-auth-view" class="space-y-3.5">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-1.5 grid grid-cols-2 gap-1.5">
+          <button id="drv-tab-login-btn" onclick="switchDriverAuthTab('login')"
+            class="py-2.5 rounded-xl text-xs font-extrabold bg-brandYellow text-neutral-950 transition">
+            Driver Login
+          </button>
+          <button id="drv-tab-reg-btn" onclick="switchDriverAuthTab('register')"
+            class="py-2.5 rounded-xl text-xs font-extrabold text-neutral-300 transition">
+            New Registration
+          </button>
+        </div>
+
+        <div id="driver-login-form" class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-3">
+          <h3 class="text-base font-extrabold text-white">Driver Partner Login</h3>
+          <p class="text-xs text-neutral-400">Enter your registered mobile number to access your dashboard.</p>
+          <div>
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Registered Phone Number</label>
+            <input id="drv-login-phone" type="tel" placeholder="e.g., 9876543210"
+              class="w-full bg-neutral-900 border border-neutral-800 focus:border-brandYellow rounded-xl px-3.5 py-3 text-sm font-bold text-white focus:outline-none" />
+          </div>
+          <button onclick="loginDriver()"
+            class="w-full py-3.5 rounded-xl bg-brandYellow hover:bg-brandYellowDark text-neutral-950 font-black text-sm shadow active:scale-[0.98] transition">
+            LOGIN TO DASHBOARD
+          </button>
+        </div>
+
+        <div id="driver-register-form" class="hidden bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-3">
+          <h3 class="text-base font-extrabold text-brandYellow">Driver Partner Registration</h3>
+          <p class="text-xs text-neutral-400">Upload clear documents for quick Admin verification.</p>
+
+          <div>
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Driver Full Name *</label>
+            <input id="reg-drv-name" type="text" placeholder="Enter your full name"
+              class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brandYellow" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Phone Number *</label>
+              <input id="reg-drv-phone" type="tel" placeholder="10-digit number"
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brandYellow" />
+            </div>
+            <div>
+              <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Vehicle Category *</label>
+              <select id="reg-drv-category"
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold text-brandYellow focus:outline-none focus:border-brandYellow">
+                <option value="bike">Bike</option>
+                <option value="toto">Toto</option>
+                <option value="auto">Auto</option>
+                <option value="cab">Cab (4-Wheeler)</option>
+                <option value="lorry">Lorry</option>
+                <option value="ambulance">Ambulance</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Vehicle Number *</label>
+            <input id="reg-drv-vehicle" type="text" placeholder="e.g., WB-24-AB-1234"
+              class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white uppercase focus:outline-none focus:border-brandYellow" />
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Full Address *</label>
+            <input id="reg-drv-address" type="text" placeholder="Village/City, Post, District, State"
+              class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-brandYellow" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <label class="bg-neutral-900 border border-dashed border-neutral-700 hover:border-brandYellow rounded-xl p-3 text-center cursor-pointer transition">
+              <i class="fa-solid fa-id-card text-brandYellow text-lg mb-1"></i>
+              <p class="text-[11px] font-bold text-white">National ID Card *</p>
+              <p id="reg-nid-status" class="text-[10px] text-neutral-400 mt-0.5">Tap to upload photo</p>
+              <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(this, 'reg-nid-base64', 'reg-nid-status')" />
+              <input type="hidden" id="reg-nid-base64" />
+            </label>
+
+            <label class="bg-neutral-900 border border-dashed border-neutral-700 hover:border-brandYellow rounded-xl p-3 text-center cursor-pointer transition">
+              <i class="fa-solid fa-camera text-emerald-400 text-lg mb-1"></i>
+              <p class="text-[11px] font-bold text-white">Driver Selfie Photo *</p>
+              <p id="reg-photo-status" class="text-[10px] text-neutral-400 mt-0.5">Tap to upload photo</p>
+              <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(this, 'reg-photo-base64', 'reg-photo-status')" />
+              <input type="hidden" id="reg-photo-base64" />
+            </label>
+          </div>
+
+          <button onclick="registerDriver()"
+            class="w-full py-3.5 rounded-xl bg-brandYellow hover:bg-brandYellowDark text-neutral-950 font-black text-sm shadow active:scale-[0.98] transition">
+            SUBMIT FOR VERIFICATION
+          </button>
+        </div>
+      </div>
+
+      <!-- DRIVER PENDING VERIFICATION SCREEN -->
+      <div id="driver-pending-view" class="hidden bg-cardBg border border-brandYellow/40 rounded-2xl p-6 text-center space-y-4">
+        <div class="w-16 h-16 rounded-full bg-brandYellow/15 text-brandYellow flex items-center justify-center mx-auto text-3xl animate-pulse">
+          <i class="fa-solid fa-hourglass-half"></i>
+        </div>
+        <div class="space-y-1">
+          <h3 class="text-lg font-black text-brandYellow">Pending to Verify - Public Cab</h3>
+          <p id="pending-driver-info" class="text-xs text-neutral-300">Your documents are under review by Admin.</p>
+          <p class="text-[11px] text-neutral-400 pt-1">Once approved, your ID will activate automatically and you can start accepting rides.</p>
+        </div>
+        <button onclick="logoutDriver()" class="px-5 py-2 rounded-xl bg-neutral-800 text-xs font-bold text-neutral-300">
+          Logout / Switch Account
+        </button>
+      </div>
+
+      <!-- DRIVER ACTIVE DASHBOARD -->
+      <div id="driver-dashboard-view" class="hidden space-y-3.5">
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-3 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <img id="dash-drv-photo" src="https://placehold.co/80x80/1E1E1E/FACC15?text=D" class="w-11 h-11 rounded-full object-cover border border-brandYellow" />
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <h3 id="dash-drv-name" class="font-extrabold text-sm text-white truncate">Driver</h3>
+                <span id="dash-drv-cat-badge" class="bg-brandYellow/20 text-brandYellow text-[10px] font-black px-1.5 py-0.5 rounded uppercase">BIKE</span>
+              </div>
+              <p id="dash-drv-vehicle" class="text-[11px] text-neutral-400 truncate">WB-00-0000</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="openDriverWhatsAppGroup()" title="Join Category WhatsApp Group"
+              class="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-extrabold text-[11px] px-2.5 py-2 rounded-xl flex items-center gap-1 shadow">
+              <i class="fa-brands fa-whatsapp text-sm"></i>
+              <span>Group</span>
+            </button>
+            <button onclick="logoutDriver()" title="Logout"
+              class="w-9 h-9 rounded-xl bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center">
+              <i class="fa-solid fa-right-from-bracket text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-[#3B0D0D] border border-rose-600/60 rounded-2xl p-3.5 space-y-1">
+          <div class="flex items-center gap-2 text-brandYellow font-extrabold text-xs">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Driver Warning</span>
+          </div>
+          <p class="text-xs text-rose-100/90 leading-relaxed">
+            Driving unauthorized vehicles without company badge or stickers is punishable under law.
+          </p>
+        </div>
+
+        <div id="drv-subscription-banner" class="hidden bg-neutral-900 border border-brandYellow/50 rounded-2xl p-3.5 flex items-center justify-between gap-2">
+          <div>
+            <p id="drv-sub-status-title" class="text-xs font-extrabold text-brandYellow">Subscription Required</p>
+            <p id="drv-sub-status-desc" class="text-[11px] text-neutral-400">Activate a plan to accept ride requests</p>
+          </div>
+          <button onclick="openSubscriptionModal()"
+            class="bg-brandYellow text-neutral-950 font-black text-xs px-3.5 py-2 rounded-xl shadow shrink-0">
+            Subscribe
+          </button>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 flex items-center justify-between shadow">
+          <div>
+            <p class="text-xs text-neutral-400 font-semibold">Today's Earnings</p>
+            <p id="dash-drv-earnings" class="text-2xl font-black text-emerald-400 mt-0.5">₹0.00</p>
+            <p id="dash-drv-trips-count" class="text-[11px] text-neutral-400 mt-0.5">Completed Trips: 0</p>
+          </div>
+
+          <button id="drv-online-toggle-btn" onclick="toggleDriverOnlineStatus()"
+            class="px-5 py-2.5 rounded-xl font-black text-xs tracking-wider shadow-lg transition bg-brandYellow text-neutral-950">
+            ONLINE
+          </button>
+        </div>
+
+        <!-- DRIVER ACTIVE ONGOING RIDE CARD (WITH CUSTOMER DETAILS, CALL, PICKUP & DROP NAVIGATION, CANCEL & COMPLETE DROP) -->
+        <div id="drv-active-job-card" class="hidden bg-cardBg border-2 border-emerald-400 rounded-2xl p-4 space-y-3 shadow-2xl">
+          <div class="flex items-center justify-between">
+            <span class="bg-emerald-500/20 text-emerald-400 text-xs font-black px-2.5 py-1 rounded-full uppercase">
+              Active Ride In Progress
+            </span>
+            <span id="drv-job-fare" class="text-base font-black text-brandYellow">₹0</span>
+          </div>
+
+          <!-- Customer Name & Phone Number Box -->
+          <div class="bg-neutral-900 rounded-xl p-3 space-y-2.5 text-xs">
+            <div class="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+              <div>
+                <p class="text-[10px] text-neutral-400 font-bold uppercase">CUSTOMER DETAILS</p>
+                <p id="drv-job-cust-name" class="font-extrabold text-sm text-white">Customer Name</p>
+                <p id="drv-job-cust-phone" class="font-bold text-xs text-emerald-400">0000000000</p>
+              </div>
+              <a id="drv-job-call-btn" href="tel:" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-phone"></i> Call Customer
+              </a>
+            </div>
+            <div>
+              <p class="text-[10px] text-emerald-400 font-bold">PICKUP LOCATION</p>
+              <p id="drv-job-pickup" class="text-neutral-200 font-medium">Pickup location</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-rose-400 font-bold">DROP LOCATION</p>
+              <p id="drv-job-drop" class="text-neutral-200 font-medium">Drop location</p>
+            </div>
+            <div id="drv-job-extra-info" class="hidden pt-1.5 border-t border-neutral-800 text-amber-300 font-semibold"></div>
+          </div>
+
+          <!-- SEPARATE PICKUP & DROP GPS NAVIGATION BUTTONS -->
+          <div class="grid grid-cols-2 gap-2">
+            <a id="drv-pickup-nav-btn" href="#" target="_blank" rel="noopener noreferrer"
+              class="py-3 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center justify-center gap-1.5 shadow">
+              <i class="fa-solid fa-location-arrow"></i> Pickup Map
+            </a>
+            <a id="drv-drop-nav-btn" href="#" target="_blank" rel="noopener noreferrer"
+              class="py-3 px-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] flex items-center justify-center gap-1.5 shadow">
+              <i class="fa-solid fa-diamond-turn-right"></i> Drop Map
+            </a>
+          </div>
+
+          <!-- OTP Verification Box -->
+          <div id="drv-otp-verify-box" class="bg-neutral-900 border border-brandYellow/50 rounded-xl p-3 space-y-2">
+            <label class="text-[11px] font-bold text-brandYellow uppercase block">কাস্টমারের ৪-সংখ্যার Pickup OTP দিন</label>
+            <div class="flex gap-2">
+              <input id="drv-otp-input" type="number" maxlength="4" placeholder="1234"
+                class="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-center text-base font-black tracking-widest text-white focus:outline-none focus:border-brandYellow" />
+              <button onclick="driverVerifyPickupOTP()"
+                class="bg-brandYellow text-neutral-950 font-black text-xs px-4 py-2 rounded-xl shrink-0">
+                Verify & Start
+              </button>
+            </div>
+          </div>
+
+          <!-- Complete Drop Button -->
+          <button id="drv-complete-drop-btn" onclick="driverCompleteDrop()"
+            class="hidden w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-black text-sm shadow-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-circle-check"></i> COMPLETE DROP & COLLECT FARE
+          </button>
+
+          <button onclick="driverCancelActiveRide()"
+            class="w-full py-2.5 rounded-xl bg-rose-600/20 border border-rose-500/40 text-rose-400 hover:bg-rose-600 hover:text-white transition font-bold text-xs">
+            Cancel Ride
+          </button>
+        </div>
+
+        <!-- LIVE RIDE REQUESTS FEED (MATCHED BY DRIVER VEHICLE CATEGORY) -->
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-3 shadow">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-extrabold text-brandYellow flex items-center gap-2">
+              <i class="fa-solid fa-bell"></i> Live Ride Requests (<span id="drv-feed-cat-label">ALL</span>)
+            </h4>
+            <span id="drv-online-indicator" class="text-[10px] font-bold text-emerald-400">Listening Live...</span>
+          </div>
+
+          <div id="drv-requests-list" class="space-y-2.5">
+            <p class="text-xs text-neutral-500 text-center py-6">No active requests nearby.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
+  <nav id="bottom-nav" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-[#161616] border-t border-neutral-800 px-2 py-2 flex items-center justify-around z-40">
+    <button onclick="switchCustomerTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-brandYellow transition">
+      <i class="fa-solid fa-house text-base"></i>
+      <span class="text-[10px] font-bold">Home</span>
+    </button>
+    <button onclick="switchCustomerTab('ambulance')" id="nav-ambulance" class="flex flex-col items-center gap-1 text-neutral-400 hover:text-rose-400 transition">
+      <i class="fa-solid fa-truck-medical text-base text-rose-500"></i>
+      <span class="text-[10px] font-bold">Ambulance</span>
+    </button>
+    <button onclick="switchCustomerTab('parcel')" id="nav-parcel" class="flex flex-col items-center gap-1 text-neutral-400 hover:text-white transition">
+      <i class="fa-solid fa-box text-base"></i>
+      <span class="text-[10px] font-bold">Parcel</span>
+    </button>
+    <button onclick="switchCustomerTab('services')" id="nav-services" class="flex flex-col items-center gap-1 text-neutral-400 hover:text-white transition">
+      <i class="fa-solid fa-wrench text-base text-sky-400"></i>
+      <span class="text-[10px] font-bold">Services</span>
+    </button>
+    <button onclick="switchCustomerTab('support')" id="nav-support" class="flex flex-col items-center gap-1 text-neutral-400 hover:text-white transition">
+      <i class="fa-solid fa-headset text-base text-emerald-400"></i>
+      <span class="text-[10px] font-bold">Support</span>
+    </button>
+  </nav>
+
+  <!-- ====================================================================== -->
+  <!--                                 MODALS                                 -->
+  <!-- ====================================================================== -->
+
+  <!-- WHATSAPP BOOKING CONFIRMATION POPUP PORTAL (CONTROLLED BY ADMIN PANEL) -->
+  <div id="whatsapp-booking-portal-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-[55] flex items-center justify-center p-4">
+    <div class="bg-cardBg border-2 border-emerald-500 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+            <i class="fa-brands fa-whatsapp"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm text-white">WhatsApp Booking Portal</h3>
+            <p class="text-[10px] text-emerald-400 font-bold">Digital Notification & Manual Send</p>
+          </div>
+        </div>
+        <button onclick="closeModal('whatsapp-booking-portal-modal')" class="text-neutral-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 space-y-1.5">
+        <p class="text-[10px] font-bold text-brandYellow uppercase">অটোমেটিক তৈরি হওয়া বুকিং মেসেজ:</p>
+        <pre id="wa-booking-preview-text" class="text-[11px] text-neutral-200 whitespace-pre-wrap font-sans leading-relaxed max-h-48 overflow-y-auto"></pre>
+      </div>
+
+      <p class="text-[11px] text-neutral-300 leading-snug">
+        নিচের বাটনে ক্লিক করলে সরাসরি WhatsApp খুলে যাবে এবং বুকিংয়ের সমস্ত ডিটেলস অটোমেটিক টাইপ হয়ে থাকবে, আপনি শুধু Send বাটনটি চাপুন।
+      </p>
+
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="closeModal('whatsapp-booking-portal-modal')"
+          class="py-3 rounded-xl bg-neutral-800 text-neutral-300 font-bold text-xs">
+          Skip
+        </button>
+        <button onclick="redirectBookingToWhatsApp()"
+          class="col-span-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg">
+          <i class="fa-brands fa-whatsapp text-base"></i> Send on WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. CUSTOMER PROFILE EDIT MODAL -->
+  <div id="customer-edit-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-cardBg border border-cardBorder rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-extrabold text-base text-brandYellow">Edit Customer Profile</h3>
+        <button onclick="closeModal('customer-edit-modal')" class="text-neutral-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Your Full Name</label>
+          <input id="edit-cust-name" type="text" placeholder="e.g., Joy Roy"
+            class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-brandYellow" />
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Mobile Number</label>
+          <input id="edit-cust-phone" type="tel" placeholder="e.g., 08343088730"
+            class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-brandYellow" />
+        </div>
+      </div>
+      <button onclick="saveCustomerProfile()"
+        class="w-full py-3 rounded-xl bg-brandYellow text-neutral-950 font-black text-xs uppercase tracking-wider">
+        Save Details
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. RIDE COMPLETED DIGITAL FARE & BIG CHECKMARK SCREEN -->
+  <div id="ride-completed-modal" class="hidden fixed inset-0 bg-neutral-950/95 backdrop-blur-md z-50 flex items-center justify-center p-5">
+    <div class="bg-cardBg border-2 border-emerald-500 rounded-3xl w-full max-w-sm p-6 text-center space-y-5 shadow-2xl">
+      <div class="w-24 h-24 rounded-full bg-emerald-500 text-neutral-950 flex items-center justify-center mx-auto text-5xl shadow-lg animate-check">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <div class="space-y-1">
+        <span class="bg-emerald-500/20 text-emerald-400 text-xs font-black px-3 py-1 rounded-full uppercase">Trip Completed</span>
+        <h3 class="text-xl font-extrabold text-white pt-2">Total Payable Fare</h3>
+        <p id="completed-fare-amount" class="text-5xl font-black text-brandYellow py-2">₹0</p>
+        <p id="completed-ride-meta" class="text-xs text-neutral-400">Thank you for riding with Public Cab!</p>
+      </div>
+      <button onclick="closeModal('ride-completed-modal')"
+        class="w-full py-3.5 rounded-2xl bg-emerald-500 text-neutral-950 font-black text-sm shadow-lg">
+        DONE
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. DRIVER SUBSCRIPTION PAYMENT MODAL -->
+  <div id="subscription-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-cardBg border border-brandYellow/50 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl my-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="font-extrabold text-base text-brandYellow">Driver Subscription Plans</h3>
+        <button onclick="closeModal('subscription-modal')" class="text-neutral-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <button id="sub-plan-1d" onclick="selectSubPlan('1d')" class="sub-plan-btn border-2 border-brandYellow bg-brandYellow/15 rounded-xl p-2.5 text-center">
+          <p class="text-[11px] font-bold text-neutral-300">1 Day</p>
+          <p id="sub-price-1d" class="text-base font-black text-brandYellow">₹29</p>
+        </button>
+        <button id="sub-plan-7d" onclick="selectSubPlan('7d')" class="sub-plan-btn border border-neutral-700 bg-neutral-900 rounded-xl p-2.5 text-center">
+          <p class="text-[11px] font-bold text-neutral-300">7 Days</p>
+          <p id="sub-price-7d" class="text-base font-black text-white">₹149</p>
+        </button>
+        <button id="sub-plan-30d" onclick="selectSubPlan('30d')" class="sub-plan-btn border border-neutral-700 bg-neutral-900 rounded-xl p-2.5 text-center">
+          <p class="text-[11px] font-bold text-neutral-300">1 Month</p>
+          <p id="sub-price-30d" class="text-base font-black text-white">₹499</p>
+        </button>
+      </div>
+
+      <div class="bg-neutral-900 rounded-xl p-3 text-center space-y-2 border border-neutral-800">
+        <p class="text-[11px] font-bold text-neutral-400 uppercase">Scan QR or Pay to Company UPI</p>
+        <img id="sub-qr-img" src="https://placehold.co/200x200/FFFFFF/111111?text=Scan+UPI+QR" class="w-36 h-36 mx-auto rounded-xl bg-white p-1.5 object-contain" />
+        <div class="flex items-center justify-center gap-2 bg-neutral-950 px-3 py-1.5 rounded-lg">
+          <span id="sub-upi-id-text" class="text-xs font-bold text-brandYellow select-all">publiccab@upi</span>
+          <button onclick="copyUPIId()" class="text-[10px] bg-neutral-800 px-2 py-0.5 rounded text-white font-bold">Copy</button>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-[11px] font-bold text-neutral-400 uppercase mb-1 block">Enter 12-Digit Payment UTR Number *</label>
+        <input id="sub-utr-input" type="text" placeholder="e.g., 412345678901"
+          class="w-full bg-neutral-900 border border-neutral-800 focus:border-brandYellow rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none" />
+      </div>
+
+      <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 text-[11px] text-amber-200 leading-relaxed">
+        <i class="fa-solid fa-circle-info text-brandYellow mr-1"></i>
+        Submit করার পর সরাসরি WhatsApp ওপেন হবে। সেখানে পেমেন্টের স্ক্রিনশট পাঠিয়ে দিন, অ্যাডমিন ১০ মিনিটের মধ্যে আইডি অ্যাক্টিভেট করে দেবেন।
+      </div>
+
+      <button onclick="submitDriverSubscription()"
+        class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg">
+        <i class="fa-brands fa-whatsapp text-base"></i> Submit UTR & Connect on WhatsApp
+      </button>
+    </div>
+  </div>
+
+  <!-- 4. PWA INSTALL GUIDE MODAL WITH COMPANY LOGO -->
+  <div id="pwa-install-guide-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-cardBg border border-brandYellow rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <img id="guide-modal-logo" src="https://cdn-icons-png.flaticon.com/512/3097/3097180.png" class="w-8 h-8 rounded-lg object-cover border border-brandYellow" />
+          <h3 class="font-extrabold text-base text-brandYellow">Install Public Cab App</h3>
+        </div>
+        <button onclick="closeModal('pwa-install-guide-modal')" class="text-neutral-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3 text-xs text-neutral-200">
+        <p class="leading-relaxed">আপনার ফোনের হোম স্ক্রিনে অফিসিয়াল লোগো সহ <strong>Public Cab</strong> অ্যাপ ইনস্টল করতে নিচের ধাপগুলো অনুসরণ করুন:</p>
+        <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3 space-y-2">
+          <p><span class="text-brandYellow font-black">১.</span> ব্রাউজারের উপরে ডানদিকে <strong>৩-ডট মেনু (⋮)</strong> বা Share বাটনে ট্যাপ করুন।</p>
+          <p><span class="text-brandYellow font-black">২.</span> <strong>"Add to Home screen"</strong> অথবা <strong>"Install app"</strong> সিলেক্ট করুন।</p>
+          <p><span class="text-brandYellow font-black">৩.</span> <strong>Install / Add</strong> চাপলেই লোগো সহ অ্যাপটি ফোনে সেট হয়ে যাবে!</p>
+        </div>
+      </div>
+      <button onclick="closeModal('pwa-install-guide-modal')"
+        class="w-full py-3 rounded-xl bg-brandYellow text-neutral-950 font-black text-xs uppercase">
+        ঠিক আছে
+      </button>
+    </div>
+  </div>
+
+  <!-- 5. ADMIN PASSWORD MODAL (Triggered by 15 taps on Logo / 'Public Cab') -->
+  <div id="admin-login-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-cardBg border-2 border-brandYellow rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-extrabold text-sm text-brandYellow flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved"></i> Admin Security Access
+        </h3>
+        <button onclick="closeModal('admin-login-modal')" class="text-neutral-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <input id="admin-pass-input" type="password" inputmode="numeric" placeholder="Enter Admin Password"
+        onkeydown="if(event.key==='Enter') verifyAdminPassword()"
+        class="w-full bg-neutral-900 border border-neutral-700 focus:border-brandYellow rounded-xl px-3.5 py-3 text-sm font-bold text-white text-center tracking-widest focus:outline-none" />
+      <button type="button" onclick="verifyAdminPassword()"
+        class="w-full py-3 rounded-xl bg-brandYellow hover:bg-brandYellowDark text-neutral-950 font-black text-xs uppercase tracking-wider shadow">
+        Unlock Admin Panel
+      </button>
+    </div>
+  </div>
+
+  <!-- 6. FULL-SCREEN ADMIN DASHBOARD -->
+  <div id="admin-dashboard" class="hidden fixed inset-0 bg-[#111111] z-50 flex flex-col max-w-md mx-auto">
+    <div class="bg-brandYellow text-neutral-950 px-4 py-3 flex items-center justify-between shadow shrink-0">
+      <div>
+        <h2 class="font-black text-base leading-tight">Public Cab Admin Control</h2>
+        <p class="text-[11px] font-bold text-neutral-800">Real-Time Master Dashboard</p>
+      </div>
+      <button onclick="closeModal('admin-dashboard')" class="bg-neutral-950 text-brandYellow px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow">
+        Exit Admin
+      </button>
+    </div>
+
+    <div class="bg-[#181818] border-b border-neutral-800 px-2 py-2 flex gap-1.5 overflow-x-auto shrink-0">
+      <button onclick="switchAdminTab('stats')" id="adm-tab-stats" class="adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-brandYellow text-neutral-950 shrink-0">Analytics</button>
+      <button onclick="switchAdminTab('drivers')" id="adm-tab-drivers" class="adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-neutral-900 text-neutral-300 shrink-0">Drivers</button>
+      <button onclick="switchAdminTab('rides')" id="adm-tab-rides" class="adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-neutral-900 text-neutral-300 shrink-0">Live Rides</button>
+      <button onclick="switchAdminTab('fares')" id="adm-tab-fares" class="adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-neutral-900 text-neutral-300 shrink-0">Fares & Hours</button>
+      <button onclick="switchAdminTab('subs')" id="adm-tab-subs" class="adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-neutral-900 text-neutral-300 shrink-0">Subscriptions</button>
+      <button onclick="switchAdminTab('branding')" id="adm-tab-branding" class="adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-neutral-900 text-neutral-300 shrink-0">WhatsApp & Ads</button>
+      <button onclick="switchAdminTab('customers')" id="adm-tab-customers" class="adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-neutral-900 text-neutral-300 shrink-0">Customers</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-3.5 space-y-4 pb-16">
+      <!-- ADMIN TAB 1: ANALYTICS -->
+      <div id="admin-sec-stats" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="bg-cardBg border border-cardBorder rounded-2xl p-3">
+            <p class="text-[11px] text-neutral-400 font-bold">Total Customers</p>
+            <p id="stat-total-customers" class="text-2xl font-black text-white mt-0.5">0</p>
+          </div>
+          <div class="bg-cardBg border border-cardBorder rounded-2xl p-3">
+            <p class="text-[11px] text-neutral-400 font-bold">Total Drivers</p>
+            <p id="stat-total-drivers" class="text-2xl font-black text-brandYellow mt-0.5">0</p>
+          </div>
+          <div class="bg-cardBg border border-cardBorder rounded-2xl p-3">
+            <p class="text-[11px] text-neutral-400 font-bold">Today Active Users</p>
+            <p id="stat-today-users" class="text-2xl font-black text-emerald-400 mt-0.5">0</p>
+          </div>
+          <div class="bg-cardBg border border-cardBorder rounded-2xl p-3">
+            <p class="text-[11px] text-neutral-400 font-bold">Pending Ride Value</p>
+            <p id="stat-pending-amount" class="text-2xl font-black text-rose-400 mt-0.5">₹0</p>
+          </div>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-2.5">
+          <h4 class="text-xs font-extrabold text-brandYellow uppercase">Revenue & Income Accounting</h4>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="bg-neutral-900 p-3 rounded-xl">
+              <p class="text-[10px] text-neutral-400 font-bold uppercase">Today (1 Day)</p>
+              <p id="inc-1d" class="text-lg font-black text-emerald-400">₹0</p>
+            </div>
+            <div class="bg-neutral-900 p-3 rounded-xl">
+              <p class="text-[10px] text-neutral-400 font-bold uppercase">This Week (7 Days)</p>
+              <p id="inc-7d" class="text-lg font-black text-emerald-400">₹0</p>
+            </div>
+            <div class="bg-neutral-900 p-3 rounded-xl">
+              <p class="text-[10px] text-neutral-400 font-bold uppercase">This Month (30 Days)</p>
+              <p id="inc-30d" class="text-lg font-black text-brandYellow">₹0</p>
+            </div>
+            <div class="bg-neutral-900 p-3 rounded-xl">
+              <p class="text-[10px] text-neutral-400 font-bold uppercase">This Year (365 Days)</p>
+              <p id="inc-365d" class="text-lg font-black text-brandYellow">₹0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 2: DRIVERS -->
+      <div id="admin-sec-drivers" class="hidden space-y-3">
+        <div id="admin-drivers-list" class="space-y-3">
+          <p class="text-xs text-neutral-500 text-center py-8">No drivers registered yet.</p>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 3: LIVE RIDES -->
+      <div id="admin-sec-rides" class="hidden space-y-3">
+        <div id="admin-rides-list" class="space-y-2.5">
+          <p class="text-xs text-neutral-500 text-center py-8">No live rides right now.</p>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 4: FARES & HOURS -->
+      <div id="admin-sec-fares" class="hidden space-y-4">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-xs font-extrabold text-brandYellow uppercase">Cab Service 24-Hour Mode</h4>
+              <p class="text-[10px] text-neutral-400">Ambulance is ALWAYS 24/7 regardless of this switch</p>
+            </div>
+            <input id="adm-is-24h" type="checkbox" class="w-5 h-5 accent-brandYellow" checked />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Open Time</label>
+              <input id="adm-open-time" type="time" value="06:00" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Close Time</label>
+              <input id="adm-close-time" type="time" value="22:00" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-3">
+          <h4 class="text-xs font-extrabold text-brandYellow uppercase">Vehicle Fare Settings</h4>
+          <div>
+            <label class="text-[11px] font-bold text-neutral-300 block mb-1">Base Distance Included (KM)</label>
+            <input id="adm-base-km" type="number" step="0.5" value="3" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+          </div>
+
+          <div id="adm-category-fares-inputs" class="space-y-2.5 pt-2"></div>
+
+          <button onclick="saveAdminFaresAndHours()" class="w-full py-3 rounded-xl bg-brandYellow text-neutral-950 font-black text-xs uppercase">
+            Save Fares & Operating Hours
+          </button>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 5: SUBSCRIPTIONS & PAYMENT VERIFICATION -->
+      <div id="admin-sec-subs" class="hidden space-y-4">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-xs font-extrabold text-brandYellow uppercase">Enable Driver Subscription</h4>
+              <p class="text-[10px] text-neutral-400">When OFF, all drivers drive completely FREE</p>
+            </div>
+            <input id="adm-sub-enabled" type="checkbox" class="w-5 h-5 accent-brandYellow" />
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] text-neutral-400 font-bold block mb-1">1 Day (₹)</label>
+              <input id="adm-sub-1d" type="number" value="29" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-2.5 py-2 text-xs font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[10px] text-neutral-400 font-bold block mb-1">7 Days (₹)</label>
+              <input id="adm-sub-7d" type="number" value="149" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-2.5 py-2 text-xs font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[10px] text-neutral-400 font-bold block mb-1">1 Month (₹)</label>
+              <input id="adm-sub-30d" type="number" value="499" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-2.5 py-2 text-xs font-bold text-white" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Admin WhatsApp Number (with 91)</label>
+            <input id="adm-whatsapp-num" type="text" placeholder="e.g., 917876482555" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+          </div>
+
+          <div>
+            <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Company UPI ID</label>
+            <input id="adm-upi-id" type="text" placeholder="e.g., publiccab@okaxis" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+          </div>
+
+          <div>
+            <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Upload UPI QR Code Scanner Image</label>
+            <input type="file" accept="image/*" onchange="handleAdminImageUpload(this, 'qrBase64')" class="text-xs text-neutral-300" />
+          </div>
+
+          <button onclick="saveAdminSubscriptionSettings()" class="w-full py-3 rounded-xl bg-brandYellow text-neutral-950 font-black text-xs uppercase">
+            Save Subscription Settings
+          </button>
+        </div>
+
+        <div class="bg-cardBg border border-emerald-500/40 rounded-2xl p-4 space-y-2.5">
+          <h4 class="text-xs font-extrabold text-emerald-400 uppercase flex items-center gap-1.5">
+            <i class="fa-solid fa-check-to-slot"></i> Payment Verification & UTR Approvals
+          </h4>
+          <p class="text-[11px] text-neutral-400">Verify driver UTR numbers below to activate their subscription ID.</p>
+          <div id="adm-sub-requests-list" class="space-y-2.5 pt-1">
+            <p class="text-xs text-neutral-500">No pending subscription UTR requests.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 6: WHATSAPP PORTAL, LOGO, GROUPS & ADS -->
+      <div id="admin-sec-branding" class="hidden space-y-4">
+        <!-- Customer Booking WhatsApp Redirect Portal Toggle -->
+        <div class="bg-cardBg border-2 border-emerald-500/40 rounded-2xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h4 class="text-xs font-extrabold text-emerald-400 uppercase flex items-center gap-1.5">
+                <i class="fa-brands fa-whatsapp text-sm"></i> Customer Booking WhatsApp Portal
+              </h4>
+              <p class="text-[10px] text-neutral-300 mt-0.5">
+                অন থাকলে কাস্টমার বুকিং করার পর অটোমেটিক নিউ বুকিং ডিটেলস সহ WhatsApp পপ-আপ আসবে এবং ম্যানুয়ালি সেন্ড করতে পারবে।
+              </p>
+            </div>
+            <input id="adm-wa-booking-redirect" type="checkbox" class="w-5 h-5 accent-emerald-500 shrink-0" checked />
+          </div>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-2.5">
+          <h4 class="text-xs font-extrabold text-brandYellow uppercase">Company Logo (Updates Splash, Header & PWA Icon)</h4>
+          <input type="file" accept="image/*" onchange="handleAdminImageUpload(this, 'logoBase64')" class="text-xs text-neutral-300" />
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-2.5">
+          <h4 class="text-xs font-extrabold text-brandYellow uppercase">Customer App Advertisement Banner</h4>
+          <div>
+            <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Upload Ad Poster Image</label>
+            <input type="file" accept="image/*" onchange="handleAdminImageUpload(this, 'adPosterBase64')" class="text-xs text-neutral-300" />
+          </div>
+          <div>
+            <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Ad Link Title</label>
+            <input id="adm-ad-title" type="text" placeholder="e.g., Get 20% Off at Partner Garage" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+          </div>
+          <div>
+            <label class="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Ad Website URL</label>
+            <input id="adm-ad-url" type="url" placeholder="https://example.com" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-white" />
+          </div>
+          <button onclick="clearAdBanner()" class="text-[11px] text-rose-400 font-bold underline">Remove Ad Banner</button>
+        </div>
+
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 space-y-2.5">
+          <h4 class="text-xs font-extrabold text-emerald-400 uppercase">Category-Wise Driver WhatsApp Groups</h4>
+          <div class="space-y-2">
+            <input id="adm-wa-bike" type="url" placeholder="Bike Drivers WhatsApp Group Link" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white" />
+            <input id="adm-wa-toto" type="url" placeholder="Toto Drivers WhatsApp Group Link" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white" />
+            <input id="adm-wa-auto" type="url" placeholder="Auto Drivers WhatsApp Group Link" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white" />
+            <input id="adm-wa-cab" type="url" placeholder="Cab (4-Wheeler) WhatsApp Group Link" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white" />
+            <input id="adm-wa-lorry" type="url" placeholder="Lorry Drivers WhatsApp Group Link" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white" />
+            <input id="adm-wa-ambulance" type="url" placeholder="Ambulance Drivers WhatsApp Group Link" class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white" />
+          </div>
+          <button onclick="saveAdminBrandingAndGroups()" class="w-full py-3 rounded-xl bg-brandYellow text-neutral-950 font-black text-xs uppercase mt-2">
+            Save All Branding & WhatsApp Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 7: CUSTOMERS -->
+      <div id="admin-sec-customers" class="hidden space-y-2.5">
+        <div id="admin-customers-list" class="space-y-2">
+          <p class="text-xs text-neutral-500 text-center py-8">No customers recorded yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. IMAGE ZOOM LIGHTBOX MODAL -->
+  <div id="image-zoom-modal" onclick="closeModal('image-zoom-modal')" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center p-4">
+    <p class="text-xs text-neutral-400 mb-3">Tap anywhere to close</p>
+    <img id="zoomed-image-target" src="" class="max-w-full max-h-[80vh] rounded-2xl border-2 border-brandYellow object-contain shadow-2xl" />
+  </div>
+
+  <!-- ====================================================================== -->
+  <!--                         JAVASCRIPT APPLICATION                         -->
+  <!-- ====================================================================== -->
+  <script>
+    // =========================================================================
+    // 1. FIREBASE INITIALIZATION
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJmu9uD5rT5ee1jNLpMQaTVIa_-yTrPzw",
+      authDomain: "public-service-11054.firebaseapp.com",
+      databaseURL: "https://public-service-11054-default-rtdb.firebaseio.com",
+      projectId: "public-service-11054",
+      storageBucket: "public-service-11054.firebasestorage.app",
+      messagingSenderId: "639313474404",
+      appId: "1:639313474404:web:9ac4645e521021c044c071",
+      measurementId: "G-ZMCRHQ4VC3"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // =========================================================================
+    // 2. GLOBAL APPLICATION STATE
+    // =========================================================================
+    const VEHICLE_META = [
+      { id: 'bike', name: 'Bike', icon: 'fa-motorcycle', defaultBase: 40, defaultPerKm: 10 },
+      { id: 'toto', name: 'Toto', icon: 'fa-van-shuttle', defaultBase: 60, defaultPerKm: 15 },
+      { id: 'auto', name: 'Auto', icon: 'fa-taxi', defaultBase: 80, defaultPerKm: 18 },
+      { id: 'cab', name: 'Cab', icon: 'fa-car-side', defaultBase: 150, defaultPerKm: 25 },
+      { id: 'lorry', name: 'Lorry', icon: 'fa-truck', defaultBase: 400, defaultPerKm: 45 },
+      { id: 'ambulance', name: 'Ambulance', icon: 'fa-truck-medical', defaultBase: 300, defaultPerKm: 35 }
+    ];
+
+    let appSettings = {
+      baseKm: 3,
+      fares: {
+        bike: { base: 40, perKm: 10 },
+        toto: { base: 60, perKm: 15 },
+        auto: { base: 80, perKm: 18 },
+        cab: { base: 150, perKm: 25 },
+        lorry: { base: 400, perKm: 45 },
+        ambulance: { base: 300, perKm: 35 }
+      },
+      is24Hours: true,
+      openTime: '06:00',
+      closeTime: '22:00',
+      subEnabled: false,
+      subPrices: { '1d': 29, '7d': 149, '30d': 499 },
+      adminWhatsApp: '917876482555',
+      waBookingRedirect: true,
+      upiId: 'publiccab@upi',
+      qrBase64: '',
+      logoBase64: '',
+      adPosterBase64: '',
+      adTitle: '',
+      adUrl: '',
+      waGroups: { bike: '', toto: '', auto: '', cab: '', lorry: '', ambulance: '' }
+    };
+
+    let currentMode = 'customer';
+    let selectedVehicle = 'bike';
+    let selectedSubPlan = '1d';
+    let pendingWhatsAppMessage = '';
+
+    let customerProfile = JSON.parse(localStorage.getItem('pc_customer_profile') || 'null') || {
+      id: 'cust_' + Date.now(),
+      name: 'Joy Roy',
+      phone: '08343088730'
+    };
+
+    let locations = {
+      cabPickup: null,
+      cabDrop: null,
+      ambPickup: null,
+      ambDrop: null,
+      parcelPickup: null,
+      parcelDrop: null
+    };
+
+    let cabDistanceKm = 0.0;
+    let cabDurationMin = 5;
+    let ambDistanceKm = 0.0;
+    let parcelDistanceKm = 0.0;
+
+    let currentDriverId = localStorage.getItem('pc_driver_id') || null;
+    let currentDriverData = null;
+    let driverIsOnline = true;
+    let skippedRideIds = new Set();
+    let knownRideIds = new Set();
+    let initialRidesLoaded = false;
+
+    let allRides = {};
+    let allDrivers = {};
+    let allCustomers = {};
+    let allSubRequests = {};
+
+    let map, pickupMarker, dropMarker, driverMarker, routeLine;
+    let driverGpsWatchId = null;
+
+    let brandTapCount = 0;
+    let brandTapTimer = null;
+    let deferredInstallPrompt = null;
+    let currentManifestBlobUrl = null;
+
+    // =========================================================================
+    // 3. FAST PWA INSTALLATION WITH COMPANY LOGO
+    // =========================================================================
+    function generateDefaultAppIconPNG() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#FACC15';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 512, 512, 110);
+      ctx.fill();
+
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      ctx.arc(256, 256, 195, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#FACC15';
+      ctx.font = '900 74px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('PUBLIC', 256, 245);
+      ctx.fillText('CAB', 256, 325);
+
+      return canvas.toDataURL('image/png');
+    }
+
+    function updatePWAManifestAndIcons(customLogoUrl) {
+      const hasCustom = customLogoUrl && customLogoUrl.length > 30;
+      const defaultLogo = generateDefaultAppIconPNG();
+      const activeLogoSrc = hasCustom ? customLogoUrl : defaultLogo;
+
+      document.getElementById('dynamic-favicon').href = activeLogoSrc;
+      document.getElementById('dynamic-apple-icon').href = activeLogoSrc;
+      document.getElementById('splash-company-logo').src = activeLogoSrc;
+      document.getElementById('header-logo-img').src = activeLogoSrc;
+      document.getElementById('install-banner-logo').src = activeLogoSrc;
+      document.getElementById('guide-modal-logo').src = activeLogoSrc;
+
+      const manifestObj = {
+        name: "Public Cab",
+        short_name: "Public Cab",
+        description: "Public Cab - Cab, 24/7 Emergency Ambulance & Parcel Booking",
+        start_url: window.location.href.split('#')[0],
+        scope: "./",
+        display: "standalone",
+        background_color: "#111111",
+        theme_color: "#FACC15",
+        orientation: "portrait",
+        icons: [
+          {
+            src: activeLogoSrc,
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any maskable"
+          },
+          {
+            src: activeLogoSrc,
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
+          }
+        ]
+      };
+
+      try {
+        if (currentManifestBlobUrl) URL.revokeObjectURL(currentManifestBlobUrl);
+        const blob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+        currentManifestBlobUrl = URL.createObjectURL(blob);
+        document.getElementById('dynamic-manifest').setAttribute('href', currentManifestBlobUrl);
+      } catch (e) {
+        const encodedManifest = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestObj));
+        document.getElementById('dynamic-manifest').setAttribute('href', encodedManifest);
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      const swScript = `
+        const CACHE_NAME = 'public-cab-v2';
+        self.addEventListener('install', (e) => self.skipWaiting());
+        self.addEventListener('activate', (e) => e.clients.claim());
+        self.addEventListener('fetch', (e) => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      try {
+        const swBlob = new Blob([swScript], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+      } catch (e) {}
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      document.getElementById('pwa-install-banner').classList.remove('hidden');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      document.getElementById('pwa-install-banner').classList.add('hidden');
+      speakBengali('পাবলিক ক্যাব অ্যাপটি আপনার ফোনে সফলভাবে ইনস্টল হয়েছে।');
+      showToast('Public Cab App Installed on Home Screen!', 'success');
+    });
+
+    async function triggerPWAInstall() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+          showToast('Installing Public Cab App...', 'success');
+        }
+        deferredInstallPrompt = null;
+      } else {
+        document.getElementById('pwa-install-guide-modal').classList.remove('hidden');
+      }
+    }
+
+    // =========================================================================
+    // 4. BENGALI VOICE ENGINE
+    // =========================================================================
+    function playNotificationChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(660, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+      } catch (e) {}
+    }
+
+    function speakBengali(text) {
+      playNotificationChime();
+      if (!('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'bn-IN';
+        msg.rate = 0.96;
+        msg.pitch = 1.0;
+        const voices = window.speechSynthesis.getVoices();
+        const bnVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes('bn'));
+        if (bnVoice) msg.voice = bnVoice;
+        window.speechSynthesis.speak(msg);
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 5. LIVE HIGH-PRECISION GPS MAP & EXACT KM FARE CALCULATION
+    // =========================================================================
+    function initMap() {
+      const defaultCoords = [23.0530, 88.6511];
+      map = L.map('main-map', { zoomControl: false }).setView(defaultCoords, 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      locateUserGPS(false);
+    }
+
+    function locateUserGPS(showNotify = false) {
+      if (!navigator.geolocation) {
+        if (showNotify) showToast('এই ডিভাইসে GPS সাপোর্ট করছে না', 'error');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const acc = Math.round(pos.coords.accuracy || 10);
+          map.setView([lat, lng], 16);
+          document.getElementById('gps-accuracy-badge').textContent = `GPS Live (±${acc}m)`;
+
+          const addressLabel = await reverseGeocodeIndia(lat, lng);
+          const locObj = { lat, lng, address: addressLabel };
+
+          if (!locations.cabPickup || showNotify) {
+            locations.cabPickup = locObj;
+            document.getElementById('cab-pickup-input').value = addressLabel;
+            updatePickupMarker(lat, lng);
+            calculateRouteAndFare('cab');
+          }
+          if (!locations.ambPickup) {
+            locations.ambPickup = locObj;
+            document.getElementById('amb-pickup-input').value = addressLabel;
+          }
+          if (showNotify) {
+            speakBengali('আপনার বর্তমান জিপিএস লোকেশন আপডেট হয়েছে।');
+            showToast('Current GPS Location Updated', 'success');
+          }
+        },
+        () => {
+          if (showNotify) showToast('ব্রাউজার সেটিংস থেকে Location Permission অন করুন', 'error');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    async function reverseGeocodeIndia(lat, lng) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const data = await res.json();
+        return data.display_name ? data.display_name.split(',').slice(0, 3).join(', ') : `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      } catch (e) {
+        return `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      }
+    }
+
+    async function useCurrentGPSForField(fieldPrefix) {
+      showToast('সঠিক GPS লোকেশন নেওয়া হচ্ছে...', 'info');
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const addr = await reverseGeocodeIndia(lat, lng);
+          const locObj = { lat, lng, address: addr };
+
+          document.getElementById(`${fieldPrefix}-input`).value = addr;
+
+          if (fieldPrefix === 'cab-pickup') {
+            locations.cabPickup = locObj;
+            updatePickupMarker(lat, lng);
+            calculateRouteAndFare('cab');
+          } else if (fieldPrefix === 'cab-drop') {
+            locations.cabDrop = locObj;
+            updateDropMarker(lat, lng);
+            calculateRouteAndFare('cab');
+          } else if (fieldPrefix === 'amb-pickup') {
+            locations.ambPickup = locObj;
+            calculateRouteAndFare('amb');
+          } else if (fieldPrefix === 'parcel-pickup') {
+            locations.parcelPickup = locObj;
+            calculateRouteAndFare('parcel');
+          } else if (fieldPrefix === 'parcel-drop') {
+            locations.parcelDrop = locObj;
+            calculateRouteAndFare('parcel');
+          }
+          speakBengali('জিপিএস লোকেশন সেট হয়েছে।');
+          showToast('GPS Location Set!', 'success');
+        },
+        () => showToast('GPS পাওয়া যায়নি, লোকেশন পারমিশন চেক করুন।', 'error'),
+        { enableHighAccuracy: true, maximumAge: 0 }
+      );
+    }
+
+    let searchDebounce = null;
+    function handleLocationSearch(query, fieldPrefix) {
+      clearTimeout(searchDebounce);
+      const box = document.getElementById(`${fieldPrefix}-suggestions`);
+      if (!query || query.trim().length < 2) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      searchDebounce = setTimeout(async () => {
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=6&q=${encodeURIComponent(query)}`;
+          const res = await fetch(url);
+          const results = await res.json();
+
+          if (!results.length) {
+            box.innerHTML = `<div class="p-3 text-xs text-neutral-400">ভারতের মধ্যে কোনো ঠিকানা পাওয়া যায়নি। পাশের এলাকার নাম লিখুন।</div>`;
+            box.classList.remove('hidden');
+            return;
+          }
+
+          box.innerHTML = results.map((item) => {
+            const shortName = item.display_name.split(',').slice(0, 4).join(', ');
+            const safeAddr = shortName.replace(/'/g, "\\'");
+            return `
+              <button type="button"
+                onclick="selectSearchedLocation('${fieldPrefix}', ${item.lat}, ${item.lon}, '${safeAddr}')"
+                class="w-full text-left px-3 py-2.5 hover:bg-neutral-800 flex items-start gap-2 transition">
+                <i class="fa-solid fa-location-dot text-brandYellow text-xs mt-0.5 shrink-0"></i>
+                <span class="text-xs text-neutral-200 leading-snug">${shortName}</span>
+              </button>
+            `;
+          }).join('');
+          box.classList.remove('hidden');
+        } catch (e) {}
+      }, 250);
+    }
+
+    function selectSearchedLocation(fieldPrefix, lat, lng, address) {
+      document.getElementById(`${fieldPrefix}-input`).value = address;
+      document.getElementById(`${fieldPrefix}-suggestions`).classList.add('hidden');
+      const locObj = { lat: parseFloat(lat), lng: parseFloat(lng), address };
+
+      if (fieldPrefix === 'cab-pickup') {
+        locations.cabPickup = locObj;
+        updatePickupMarker(locObj.lat, locObj.lng);
+        calculateRouteAndFare('cab');
+      } else if (fieldPrefix === 'cab-drop') {
+        locations.cabDrop = locObj;
+        updateDropMarker(locObj.lat, locObj.lng);
+        calculateRouteAndFare('cab');
+      } else if (fieldPrefix === 'amb-pickup') {
+        locations.ambPickup = locObj;
+        calculateRouteAndFare('amb');
+      } else if (fieldPrefix === 'amb-drop') {
+        locations.ambDrop = locObj;
+        calculateRouteAndFare('amb');
+      } else if (fieldPrefix === 'parcel-pickup') {
+        locations.parcelPickup = locObj;
+        calculateRouteAndFare('parcel');
+      } else if (fieldPrefix === 'parcel-drop') {
+        locations.parcelDrop = locObj;
+        calculateRouteAndFare('parcel');
+      }
+    }
+
+    function updatePickupMarker(lat, lng) {
+      if (pickupMarker) map.removeLayer(pickupMarker);
+      const icon = L.divIcon({
+        html: `<div class="w-4 h-4 rounded-full bg-emerald-400 border-2 border-neutral-950 shadow-lg"></div>`,
+        className: ''
+      });
+      pickupMarker = L.marker([lat, lng], { icon }).addTo(map);
+      if (!dropMarker) map.setView([lat, lng], 15);
+    }
+
+    function updateDropMarker(lat, lng) {
+      if (dropMarker) map.removeLayer(dropMarker);
+      const icon = L.divIcon({
+        html: `<div class="w-5 h-5 rounded-full bg-rose-500 border-2 border-white shadow-lg flex items-center justify-center text-[9px] text-white font-bold">D</div>`,
+        className: ''
+      });
+      dropMarker = L.marker([lat, lng], { icon }).addTo(map);
+    }
+
+    async function calculateRouteAndFare(mode) {
+      const p = mode === 'cab' ? locations.cabPickup : mode === 'amb' ? locations.ambPickup : locations.parcelPickup;
+      const d = mode === 'cab' ? locations.cabDrop : mode === 'amb' ? locations.ambDrop : locations.parcelDrop;
+      if (!p || !d) return;
+
+      let distKm = haversineKm(p.lat, p.lng, d.lat, d.lng);
+      let durMin = Math.max(2, Math.round(distKm * 2.8));
+
+      try {
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${p.lng},${p.lat};${d.lng},${d.lat}?overview=full&geometries=geojson`);
+        const data = await res.json();
+        if (data.routes && data.routes[0]) {
+          distKm = data.routes[0].distance / 1000;
+          durMin = Math.max(2, Math.round(data.routes[0].duration / 60));
+
+          if (mode === 'cab') {
+            if (routeLine) map.removeLayer(routeLine);
+            const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            routeLine = L.polyline(coords, { color: '#111111', weight: 5, opacity: 0.9 }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+          }
+        }
+      } catch (e) {}
+
+      distKm = parseFloat(distKm.toFixed(2));
+
+      if (mode === 'cab') {
+        cabDistanceKm = distKm;
+        cabDurationMin = durMin;
+        document.getElementById('cab-distance-label').textContent = `Distance: ${distKm.toFixed(2)} km`;
+        renderVehicleGrid();
+      } else if (mode === 'amb') {
+        ambDistanceKm = distKm;
+        const fare = computeCategoryFare('ambulance', distKm);
+        document.getElementById('amb-distance-text').textContent = `Distance: ${distKm.toFixed(2)} km`;
+        document.getElementById('amb-fare-text').textContent = `Est. Fare: ₹${fare}`;
+      } else if (mode === 'parcel') {
+        parcelDistanceKm = distKm;
+        const fare = computeCategoryFare('bike', distKm);
+        document.getElementById('parcel-distance-text').textContent = `Distance: ${distKm.toFixed(2)} km`;
+        document.getElementById('parcel-fare-text').textContent = `Est. Fare: ₹${fare}`;
+      }
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function computeCategoryFare(catId, distanceKm) {
+      const baseKm = parseFloat(appSettings.baseKm) || 3;
+      const cfg = (appSettings.fares && appSettings.fares[catId]) || { base: 40, perKm: 10 };
+      const dist = Math.max(0, parseFloat(distanceKm) || 0);
+      if (dist <= baseKm) {
+        return Math.round(Number(cfg.base));
+      }
+      const extraKm = dist - baseKm;
+      return Math.round(Number(cfg.base) + (extraKm * Number(cfg.perKm)));
+    }
+
+    // =========================================================================
+    // 6. CUSTOMER BOOKINGS, REAL-TIME TRACKING & WHATSAPP PORTAL REDIRECT
+    // =========================================================================
+    function renderCustomerProfile() {
+      document.getElementById('cust-display-name').textContent = customerProfile.name || 'Guest Customer';
+      document.getElementById('cust-display-phone').textContent = customerProfile.phone || 'Tap Edit to set phone';
+      db.ref(`customers/${customerProfile.id}`).update({
+        id: customerProfile.id,
+        name: customerProfile.name,
+        phone: customerProfile.phone,
+        lastActive: Date.now()
+      });
+    }
+
+    function openCustomerEditModal() {
+      document.getElementById('edit-cust-name').value = customerProfile.name;
+      document.getElementById('edit-cust-phone').value = customerProfile.phone;
+      document.getElementById('customer-edit-modal').classList.remove('hidden');
+    }
+
+    function saveCustomerProfile() {
+      const name = document.getElementById('edit-cust-name').value.trim();
+      const phone = document.getElementById('edit-cust-phone').value.trim();
+      if (!name || !phone) return showToast('নাম এবং মোবাইল নম্বর লিখুন', 'error');
+      customerProfile.name = name;
+      customerProfile.phone = phone;
+      localStorage.setItem('pc_customer_profile', JSON.stringify(customerProfile));
+      renderCustomerProfile();
+      closeModal('customer-edit-modal');
+      speakBengali('আপনার প্রোফাইল তথ্য সেভ হয়েছে।');
+      showToast('Profile Updated!', 'success');
+    }
+
+    function renderVehicleGrid() {
+      const grid = document.getElementById('vehicle-grid');
+      const cabCats = VEHICLE_META.filter(v => v.id !== 'ambulance');
+
+      grid.innerHTML = cabCats.map(v => {
+        const fare = computeCategoryFare(v.id, cabDistanceKm);
+        const isSelected = selectedVehicle === v.id;
+        return `
+          <button type="button" onclick="selectVehicleCategory('${v.id}')"
+            class="rounded-2xl p-3 flex flex-col items-center justify-center gap-1 transition border-2 ${
+              isSelected
+                ? 'bg-brandYellow/10 border-brandYellow shadow-lg'
+                : 'bg-cardBg border-cardBorder hover:border-neutral-700'
+            }">
+            <i class="fa-solid ${v.icon} text-xl ${isSelected ? 'text-brandYellow' : 'text-white'}"></i>
+            <span class="text-xs font-extrabold ${isSelected ? 'text-brandYellow' : 'text-neutral-200'}">${v.name}</span>
+            <span class="text-xs font-black text-neutral-400">₹${fare}</span>
+          </button>
+        `;
+      }).join('');
+
+      const activeMeta = VEHICLE_META.find(v => v.id === selectedVehicle);
+      const activeFare = computeCategoryFare(selectedVehicle, cabDistanceKm);
+      document.getElementById('book-cab-btn-text').textContent = `BOOK ${activeMeta.name.toUpperCase()} NOW • ₹${activeFare}`;
+    }
+
+    function selectVehicleCategory(catId) {
+      selectedVehicle = catId;
+      renderVehicleGrid();
+    }
+
+    function isCabServiceOpenNow() {
+      if (appSettings.is24Hours) return true;
+      const now = new Date();
+      const curMin = now.getHours() * 60 + now.getMinutes();
+      const [oh, om] = (appSettings.openTime || '06:00').split(':').map(Number);
+      const [ch, cm] = (appSettings.closeTime || '22:00').split(':').map(Number);
+      return curMin >= (oh * 60 + om) && curMin <= (ch * 60 + cm);
+    }
+
+    function triggerCustomerWhatsAppBookingPortal(rideData) {
+      if (!appSettings.waBookingRedirect) return;
+
+      const serviceTitle = rideData.type === 'ambulance'
+        ? '24/7 EMERGENCY AMBULANCE'
+        : rideData.type === 'parcel'
+        ? `PARCEL DELIVERY (${rideData.parcelVehicleReq})`
+        : rideData.category.toUpperCase();
+
+      const extraDetails = rideData.type === 'ambulance'
+        ? `\nHospital: ${rideData.hospitalName || 'N/A'}\nCondition: ${rideData.patientProblem}`
+        : rideData.type === 'parcel'
+        ? `\nParcel Item: ${rideData.parcelDesc}\nWeight: ${rideData.parcelWeight}`
+        : '';
+
+      const messageBody =
+        `🚖 *NEW BOOKING - PUBLIC CAB* 🚖\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `• *Booking ID:* ${rideData.id}\n` +
+        `• *Service:* ${serviceTitle}\n` +
+        `• *Customer:* ${rideData.customerName}\n` +
+        `• *Phone:* ${rideData.customerPhone}\n` +
+        `• *Pickup:* ${rideData.pickup.address}\n` +
+        `• *Drop:* ${rideData.drop.address}\n` +
+        `• *Distance:* ${rideData.distanceKm} km\n` +
+        `• *Total Fare:* ₹${rideData.fare}\n` +
+        `• *Pickup OTP:* ${rideData.otp}` +
+        extraDetails;
+
+      pendingWhatsAppMessage = messageBody;
+      document.getElementById('wa-booking-preview-text').textContent = messageBody;
+      document.getElementById('whatsapp-booking-portal-modal').classList.remove('hidden');
+    }
+
+    function redirectBookingToWhatsApp() {
+      const waPhone = (appSettings.adminWhatsApp || '917876482555').replace(/\D/g, '');
+      const url = `https://wa.me/${waPhone}?text=${encodeURIComponent(pendingWhatsAppMessage)}`;
+      closeModal('whatsapp-booking-portal-modal');
+      window.open(url, '_blank');
+    }
+
+    function submitCabBooking() {
+      if (!isCabServiceOpenNow()) {
+        return showToast(`Cab Service এখন বন্ধ আছে (${appSettings.openTime} - ${appSettings.closeTime})। Ambulance ২৪ ঘণ্টা খোলা!`, 'error');
+      }
+      if (!locations.cabPickup || !locations.cabDrop) {
+        return showToast('অনুগ্রহ করে Pickup এবং Drop দুটি লোকেশনই সিলেক্ট করুন!', 'error');
+      }
+      if (!customerProfile.phone) {
+        openCustomerEditModal();
+        return showToast('প্রথমে আপনার মোবাইল নম্বর দিন', 'error');
+      }
+
+      const fare = computeCategoryFare(selectedVehicle, cabDistanceKm);
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      const rideId = 'ride_' + Date.now();
+
+      const ridePayload = {
+        id: rideId,
+        type: 'cab',
+        category: selectedVehicle,
+        customerId: customerProfile.id,
+        customerName: customerProfile.name,
+        customerPhone: customerProfile.phone,
+        pickup: locations.cabPickup,
+        drop: locations.cabDrop,
+        distanceKm: cabDistanceKm,
+        durationMin: cabDurationMin,
+        fare,
+        otp,
+        status: 'pending',
+        createdAt: Date.now()
+      };
+
+      db.ref(`rides/${rideId}`).set(ridePayload);
+      speakBengali('আপনার বুকিং সফলভাবে ড্রাইভারদের কাছে পাঠানো হয়েছে। অনুগ্রহ করে অপেক্ষা করুন।');
+      showToast('বুকিং পাঠানো হয়েছে! ড্রাইভার খোঁজা হচ্ছে...', 'success');
+      triggerCustomerWhatsAppBookingPortal(ridePayload);
+    }
+
+    function submitAmbulanceBooking() {
+      const hospitalName = document.getElementById('amb-hospital-name').value.trim();
+      const problem = document.getElementById('amb-patient-problem').value.trim();
+
+      if (!locations.ambPickup) return showToast('রোগীর পিকআপ GPS লোকেশন দিন', 'error');
+      if (!locations.ambDrop && !hospitalName) return showToast('হাসপাতালের নাম বা ড্রপ লোকেশন লিখুন', 'error');
+      if (!problem) return showToast('রোগীর সমস্যা লিখুন', 'error');
+
+      const dropLoc = locations.ambDrop || { lat: locations.ambPickup.lat + 0.02, lng: locations.ambPickup.lng + 0.02, address: hospitalName };
+      const fare = computeCategoryFare('ambulance', ambDistanceKm);
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      const rideId = 'ride_' + Date.now();
+
+      const ridePayload = {
+        id: rideId,
+        type: 'ambulance',
+        category: 'ambulance',
+        customerId: customerProfile.id,
+        customerName: customerProfile.name,
+        customerPhone: customerProfile.phone,
+        pickup: locations.ambPickup,
+        drop: dropLoc,
+        hospitalName,
+        patientProblem: problem,
+        distanceKm: ambDistanceKm,
+        durationMin: Math.max(5, Math.round(ambDistanceKm * 2.5)),
+        fare,
+        otp,
+        status: 'pending',
+        createdAt: Date.now()
+      };
+
+      db.ref(`rides/${rideId}`).set(ridePayload);
+      switchCustomerTab('home');
+      speakBengali('জরুরি অ্যাম্বুলেন্স বুকিং পাঠানো হয়েছে।');
+      showToast('24/7 Emergency Ambulance Dispatched!', 'success');
+      triggerCustomerWhatsAppBookingPortal(ridePayload);
+    }
+
+    function submitParcelBooking() {
+      if (!isCabServiceOpenNow()) {
+        return showToast('বর্তমানে সার্ভিস সময়সীমার বাইরে আছে।', 'error');
+      }
+      const reqVehicle = document.getElementById('parcel-vehicle-req').value.trim() || 'Any Vehicle';
+      const weight = document.getElementById('parcel-weight').value.trim() || 'Standard';
+      const desc = document.getElementById('parcel-item-desc').value.trim();
+
+      if (!locations.parcelPickup || !locations.parcelDrop) {
+        return showToast('পার্সেল পিকআপ এবং ড্রপ লোকেশন দিন', 'error');
+      }
+      if (!desc) return showToast('পার্সেলের ভেতরে কী আছে তা লিখুন', 'error');
+
+      const fare = computeCategoryFare('bike', parcelDistanceKm);
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      const rideId = 'ride_' + Date.now();
+
+      const ridePayload = {
+        id: rideId,
+        type: 'parcel',
+        category: 'parcel_all',
+        parcelVehicleReq: reqVehicle,
+        parcelWeight: weight,
+        parcelDesc: desc,
+        customerId: customerProfile.id,
+        customerName: customerProfile.name,
+        customerPhone: customerProfile.phone,
+        pickup: locations.parcelPickup,
+        drop: locations.parcelDrop,
+        distanceKm: parcelDistanceKm,
+        durationMin: Math.max(5, Math.round(parcelDistanceKm * 3)),
+        fare,
+        otp,
+        status: 'pending',
+        createdAt: Date.now()
+      };
+
+      db.ref(`rides/${rideId}`).set(ridePayload);
+      switchCustomerTab('home');
+      speakBengali('আপনার পার্সেল বুকিং সব ড্রাইভারদের কাছে পাঠানো হয়েছে।');
+      showToast('Parcel request broadcasted to ALL drivers!', 'success');
+      triggerCustomerWhatsAppBookingPortal(ridePayload);
+    }
+
+    function customerCancelRide() {
+      const myActive = getCustomerActiveRide();
+      if (!myActive) return;
+      if (myActive.status !== 'pending') {
+        return showToast('ড্রাইভার বুকিং অ্যাকসেপ্ট করেছেন! এখন শুধু ড্রাইভার বা অ্যাডমিন ক্যানসেল করতে পারবেন।', 'error');
+      }
+      db.ref(`rides/${myActive.id}`).update({ status: 'cancelled', cancelledBy: 'customer' });
+      speakBengali('আপনার বুকিং বাতিল করা হয়েছে।');
+      showToast('Booking Cancelled', 'info');
+    }
+
+    function getCustomerActiveRide() {
+      const list = Object.values(allRides).filter(
+        r => r.customerId === customerProfile.id && ['pending', 'accepted', 'started'].includes(r.status)
+      );
+      return list.sort((a, b) => b.createdAt - a.createdAt)[0] || null;
+    }
+
+    function renderCustomerActiveRide() {
+      const ride = getCustomerActiveRide();
+      const card = document.getElementById('cust-active-ride-card');
+
+      if (!ride) {
+        card.classList.add('hidden');
+        if (driverMarker) { map.removeLayer(driverMarker); driverMarker = null; }
+        return;
+      }
+
+      card.classList.remove('hidden');
+      document.getElementById('cust-ride-category-badge').textContent =
+        ride.type === 'parcel' ? `PARCEL (${ride.parcelVehicleReq})` : (ride.category || '').toUpperCase();
+      document.getElementById('cust-ride-pickup-text').textContent = ride.pickup.address;
+      document.getElementById('cust-ride-drop-text').textContent = ride.drop.address;
+      document.getElementById('cust-ride-dist-text').textContent = `Distance: ${ride.distanceKm} km`;
+      document.getElementById('cust-ride-fare-text').textContent = `Fare: ₹${ride.fare}`;
+
+      const badge = document.getElementById('cust-ride-status-badge');
+      const drvBox = document.getElementById('cust-assigned-driver-box');
+      const cancelBtn = document.getElementById('cust-cancel-ride-btn');
+
+      if (ride.status === 'pending') {
+        badge.textContent = 'ড্রাইভার খোঁজা হচ্ছে...';
+        drvBox.classList.add('hidden');
+        cancelBtn.classList.remove('hidden');
+      } else {
+        badge.textContent = ride.status === 'accepted' ? 'ড্রাইভার আসছেন!' : 'যাত্রা শুরু হয়েছে (Trip Started)';
+        drvBox.classList.remove('hidden');
+        cancelBtn.classList.add('hidden');
+
+        document.getElementById('cust-drv-name').textContent = ride.driverName || 'Assigned Driver';
+        document.getElementById('cust-drv-vehicle').textContent = `Vehicle: ${ride.driverVehicle || ''}`;
+        document.getElementById('cust-drv-phone').textContent = `Phone: ${ride.driverPhone || ''}`;
+        document.getElementById('cust-drv-call-btn').href = `tel:${ride.driverPhone}`;
+        if (ride.driverPhoto) document.getElementById('cust-drv-photo').src = ride.driverPhoto;
+
+        document.getElementById('cust-ride-otp').textContent = ride.otp;
+        document.getElementById('cust-otp-banner').style.display = ride.status === 'started' ? 'none' : 'flex';
+
+        if (ride.driverLat && ride.driverLng) {
+          const drvIcon = L.divIcon({
+            html: `<div class="w-8 h-8 rounded-full bg-brandYellow border-2 border-neutral-950 flex items-center justify-center text-neutral-950 shadow-xl"><i class="fa-solid fa-car text-xs"></i></div>`,
+            className: ''
+          });
+          if (driverMarker) {
+            driverMarker.setLatLng([ride.driverLat, ride.driverLng]);
+          } else {
+            driverMarker = L.marker([ride.driverLat, ride.driverLng], { icon: drvIcon }).addTo(map);
+          }
+
+          const distToPickup = haversineKm(ride.driverLat, ride.driverLng, ride.pickup.lat, ride.pickup.lng);
+          const etaMins = Math.max(1, Math.round(distToPickup * 3));
+          document.getElementById('cust-drv-eta').textContent = ride.status === 'started' ? 'Picked Up' : `~${etaMins} mins`;
+          document.getElementById('cust-trip-eta').textContent = `~${ride.durationMin || 10} mins`;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 7. DRIVER AUTHENTICATION, SUBSCRIPTIONS & INSTANT RIDE DISPATCH
+    // =========================================================================
+    function switchDriverAuthTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('driver-login-form').classList.toggle('hidden', !isLogin);
+      document.getElementById('driver-register-form').classList.toggle('hidden', isLogin);
+      document.getElementById('drv-tab-login-btn').className = isLogin
+        ? 'py-2.5 rounded-xl text-xs font-extrabold bg-brandYellow text-neutral-950 transition'
+        : 'py-2.5 rounded-xl text-xs font-extrabold text-neutral-300 transition';
+      document.getElementById('drv-tab-reg-btn').className = !isLogin
+        ? 'py-2.5 rounded-xl text-xs font-extrabold bg-brandYellow text-neutral-950 transition'
+        : 'py-2.5 rounded-xl text-xs font-extrabold text-neutral-300 transition';
+    }
+
+    function handleImageUpload(input, targetInputId, statusTextId) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 600;
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+            else { w = Math.round(w * maxDim / h); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          document.getElementById(targetInputId).value = canvas.toDataURL('image/jpeg', 0.72);
+          document.getElementById(statusTextId).textContent = '✓ Photo Ready';
+          document.getElementById(statusTextId).classList.add('text-emerald-400');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function registerDriver() {
+      const name = document.getElementById('reg-drv-name').value.trim();
+      const phone = document.getElementById('reg-drv-phone').value.trim();
+      const category = document.getElementById('reg-drv-category').value.toLowerCase();
+      const vehicleNumber = document.getElementById('reg-drv-vehicle').value.trim().toUpperCase();
+      const address = document.getElementById('reg-drv-address').value.trim();
+      const nidBase64 = document.getElementById('reg-nid-base64').value;
+      const photoBase64 = document.getElementById('reg-photo-base64').value;
+
+      if (!name || !phone || !vehicleNumber || !address || !nidBase64 || !photoBase64) {
+        return showToast('সব তথ্য পূরণ করুন এবং ID কার্ড ও সেলফি আপলোড করুন!', 'error');
+      }
+
+      const existing = Object.values(allDrivers).find(d => d.phone === phone);
+      if (existing) {
+        currentDriverId = existing.id;
+        localStorage.setItem('pc_driver_id', currentDriverId);
+        renderDriverView();
+        return showToast('অ্যাকাউন্ট পাওয়া গেছে! লগইন সম্পন্ন।', 'info');
+      }
+
+      const driverId = 'drv_' + Date.now();
+      db.ref(`drivers/${driverId}`).set({
+        id: driverId,
+        name,
+        phone,
+        category,
+        vehicleNumber,
+        address,
+        nidBase64,
+        photoBase64,
+        status: 'pending',
+        earnings: 0,
+        tripsCount: 0,
+        subExpiry: 0,
+        createdAt: Date.now()
+      });
+      currentDriverId = driverId;
+      localStorage.setItem('pc_driver_id', driverId);
+      renderDriverView();
+      speakBengali('আপনার ড্রাইভার রেজিস্ট্রেশন জমা হয়েছে। অ্যাডমিন অ্যাপ্রুভ করলেই আইডি চালু হবে।');
+      showToast('Registration submitted! Pending Admin verification.', 'success');
+    }
+
+    function loginDriver() {
+      const phone = document.getElementById('drv-login-phone').value.trim();
+      if (!phone) return showToast('রেজিস্টার্ড মোবাইল নম্বর দিন', 'error');
+
+      const found = Object.values(allDrivers).find(d => d.phone === phone);
+      if (!found) {
+        return showToast('এই নম্বরটি রেজিস্টার্ড নয়। আগে রেজিস্ট্রেশন করুন!', 'error');
+      }
+      currentDriverId = found.id;
+      localStorage.setItem('pc_driver_id', found.id);
+      renderDriverView();
+      speakBengali('ড্রাইভার ড্যাশবোর্ডে আপনাকে স্বাগতম।');
+      showToast('Welcome to Driver Dashboard', 'success');
+    }
+
+    function logoutDriver() {
+      currentDriverId = null;
+      currentDriverData = null;
+      localStorage.removeItem('pc_driver_id');
+      if (driverGpsWatchId) {
+        navigator.geolocation.clearWatch(driverGpsWatchId);
+        driverGpsWatchId = null;
+      }
+      renderDriverView();
+    }
+
+    function toggleDriverOnlineStatus() {
+      driverIsOnline = !driverIsOnline;
+      const btn = document.getElementById('drv-online-toggle-btn');
+      const ind = document.getElementById('drv-online-indicator');
+      if (driverIsOnline) {
+        btn.textContent = 'ONLINE';
+        btn.className = 'px-5 py-2.5 rounded-xl font-black text-xs tracking-wider shadow-lg transition bg-brandYellow text-neutral-950';
+        ind.textContent = 'Listening Live...';
+        ind.className = 'text-[10px] font-bold text-emerald-400';
+        speakBengali('আপনি এখন অনলাইন আছেন। নতুন বুকিং আসলে নোটিফিকেশন পাবেন।');
+      } else {
+        btn.textContent = 'OFFLINE';
+        btn.className = 'px-5 py-2.5 rounded-xl font-black text-xs tracking-wider shadow-lg transition bg-neutral-800 text-neutral-400';
+        ind.textContent = 'You are Offline';
+        ind.className = 'text-[10px] font-bold text-rose-400';
+        speakBengali('আপনি এখন অফলাইন আছেন।');
+      }
+      renderDriverRequests();
+    }
+
+    function isDriverSubscriptionValid(drv) {
+      if (!appSettings.subEnabled) return true;
+      return drv && drv.subExpiry && drv.subExpiry > Date.now();
+    }
+
+    function renderDriverView() {
+      const authView = document.getElementById('driver-auth-view');
+      const pendingView = document.getElementById('driver-pending-view');
+      const dashView = document.getElementById('driver-dashboard-view');
+
+      if (!currentDriverId || !allDrivers[currentDriverId]) {
+        authView.classList.remove('hidden');
+        pendingView.classList.add('hidden');
+        dashView.classList.add('hidden');
+        return;
+      }
+
+      currentDriverData = allDrivers[currentDriverId];
+      authView.classList.add('hidden');
+
+      if (currentDriverData.status === 'pending' || currentDriverData.status === 'suspended') {
+        pendingView.classList.remove('hidden');
+        dashView.classList.add('hidden');
+        document.getElementById('pending-driver-info').textContent =
+          currentDriverData.status === 'suspended'
+            ? 'Your account has been suspended by Admin. Contact support.'
+            : `${currentDriverData.name} (${currentDriverData.vehicleNumber}) — Pending to Verify - Public Cab`;
+        return;
+      }
+
+      pendingView.classList.add('hidden');
+      dashView.classList.remove('hidden');
+
+      const drvCat = (currentDriverData.category || 'bike').toUpperCase();
+      document.getElementById('dash-drv-name').textContent = currentDriverData.name;
+      document.getElementById('dash-drv-vehicle').textContent = currentDriverData.vehicleNumber;
+      document.getElementById('dash-drv-cat-badge').textContent = drvCat;
+      document.getElementById('drv-feed-cat-label').textContent = drvCat;
+      if (currentDriverData.photoBase64) {
+        document.getElementById('dash-drv-photo').src = currentDriverData.photoBase64;
+      }
+
+      document.getElementById('dash-drv-earnings').textContent = `₹${Number(currentDriverData.earnings || 0).toFixed(2)}`;
+      document.getElementById('dash-drv-trips-count').textContent = `Completed Trips: ${currentDriverData.tripsCount || 0}`;
+
+      const subBanner = document.getElementById('drv-subscription-banner');
+      if (appSettings.subEnabled) {
+        subBanner.classList.remove('hidden');
+        const valid = isDriverSubscriptionValid(currentDriverData);
+        if (valid) {
+          const hrsLeft = Math.max(1, Math.round((currentDriverData.subExpiry - Date.now()) / 3600000));
+          document.getElementById('drv-sub-status-title').textContent = 'Subscription Active ✓';
+          document.getElementById('drv-sub-status-desc').textContent = `Valid for ~${hrsLeft} hours`;
+        } else {
+          document.getElementById('drv-sub-status-title').textContent = 'Subscription Expired / Required';
+          document.getElementById('drv-sub-status-desc').textContent = 'Tap Subscribe to unlock ride acceptance';
+        }
+      } else {
+        subBanner.classList.add('hidden');
+      }
+
+      startDriverLiveGPSTracking();
+      renderDriverRequests();
+    }
+
+    function startDriverLiveGPSTracking() {
+      if (driverGpsWatchId || !navigator.geolocation) return;
+      driverGpsWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const activeJob = getDriverActiveJob();
+          if (activeJob) {
+            db.ref(`rides/${activeJob.id}`).update({
+              driverLat: pos.coords.latitude,
+              driverLng: pos.coords.longitude
+            });
+          }
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 3000 }
+      );
+    }
+
+    function openDriverWhatsAppGroup() {
+      if (!currentDriverData) return;
+      const cat = (currentDriverData.category || '').toLowerCase();
+      const groupUrl = (appSettings.waGroups && appSettings.waGroups[cat]) || '';
+      if (!groupUrl) {
+        return showToast(`No WhatsApp group link configured yet for ${cat.toUpperCase()} drivers.`, 'info');
+      }
+      window.open(groupUrl, '_blank');
+    }
+
+    function getDriverActiveJob() {
+      if (!currentDriverId) return null;
+      return Object.values(allRides).find(
+        r => r.driverId === currentDriverId && ['accepted', 'started'].includes(r.status)
+      ) || null;
+    }
+
+    function renderDriverRequests() {
+      if (!currentDriverData || currentDriverData.status !== 'approved') return;
+
+      const activeJob = getDriverActiveJob();
+      const jobCard = document.getElementById('drv-active-job-card');
+
+      if (activeJob) {
+        jobCard.classList.remove('hidden');
+        document.getElementById('drv-job-fare').textContent = `₹${activeJob.fare}`;
+        document.getElementById('drv-job-cust-name').textContent = activeJob.customerName || 'Customer';
+        document.getElementById('drv-job-cust-phone').textContent = activeJob.customerPhone || '';
+        document.getElementById('drv-job-call-btn').href = `tel:${activeJob.customerPhone}`;
+        document.getElementById('drv-job-pickup').textContent = activeJob.pickup.address;
+        document.getElementById('drv-job-drop').textContent = activeJob.drop.address;
+
+        const extraBox = document.getElementById('drv-job-extra-info');
+        if (activeJob.type === 'ambulance') {
+          extraBox.classList.remove('hidden');
+          extraBox.textContent = `Hospital: ${activeJob.hospitalName || 'N/A'} | Condition: ${activeJob.patientProblem}`;
+        } else if (activeJob.type === 'parcel') {
+          extraBox.classList.remove('hidden');
+          extraBox.textContent = `Parcel: ${activeJob.parcelDesc} (${activeJob.parcelWeight}) • Req: ${activeJob.parcelVehicleReq}`;
+        } else {
+          extraBox.classList.add('hidden');
+        }
+
+        // Separate Pickup Navigation & Drop Navigation Links (Fixed Google Maps URLs)
+        const pLat = activeJob.pickup.lat;
+        const pLng = activeJob.pickup.lng;
+        const dLat = activeJob.drop.lat;
+        const dLng = activeJob.drop.lng;
+        document.getElementById('drv-pickup-nav-btn').href = `https://www.google.com/maps/dir/?api=1&destination=${pLat},${pLng}&travelmode=driving`;
+        document.getElementById('drv-drop-nav-btn').href = `https://www.google.com/maps/dir/?api=1&destination=${dLat},${dLng}&travelmode=driving`;
+
+        if (activeJob.status === 'accepted') {
+          document.getElementById('drv-otp-verify-box').classList.remove('hidden');
+          document.getElementById('drv-complete-drop-btn').classList.add('hidden');
+        } else {
+          document.getElementById('drv-otp-verify-box').classList.add('hidden');
+          document.getElementById('drv-complete-drop-btn').classList.remove('hidden');
+        }
+      } else {
+        jobCard.classList.add('hidden');
+      }
+
+      const listEl = document.getElementById('drv-requests-list');
+      if (!driverIsOnline) {
+        listEl.innerHTML = `<p class="text-xs text-neutral-500 text-center py-6">আপনি অফলাইন আছেন। বুকিং পেতে ONLINE বাটন চাপুন।</p>`;
+        return;
+      }
+
+      const myCategory = (currentDriverData.category || '').toLowerCase().trim();
+      const matchingRides = Object.values(allRides).filter(r => {
+        if (!r || r.status !== 'pending' || skippedRideIds.has(r.id)) return false;
+        const rideCat = (r.category || '').toLowerCase().trim();
+        return r.type === 'parcel' || rideCat === myCategory;
+      }).sort((a, b) => b.createdAt - a.createdAt);
+
+      if (!matchingRides.length) {
+        listEl.innerHTML = `<p class="text-xs text-neutral-500 text-center py-6">এই মুহূর্তে আপনার ক্যাটাগরিতে কোনো নতুন বুকিং নেই।</p>`;
+        return;
+      }
+
+      listEl.innerHTML = matchingRides.map(r => {
+        const tag = r.type === 'parcel'
+          ? `PARCEL (${r.parcelVehicleReq})`
+          : r.type === 'ambulance'
+          ? '24/7 AMBULANCE EMERGENCY'
+          : (r.category || '').toUpperCase();
+
+        const extraLine = r.type === 'ambulance'
+          ? `<p class="text-[11px] text-rose-400 font-bold">Hospital: ${r.hospitalName} • ${r.patientProblem}</p>`
+          : r.type === 'parcel'
+          ? `<p class="text-[11px] text-amber-300 font-bold">Item: ${r.parcelDesc} (${r.parcelWeight})</p>`
+          : '';
+
+        return `
+          <div class="bg-neutral-900 border border-brandYellow/40 rounded-xl p-3 space-y-2.5 shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="bg-brandYellow/20 text-brandYellow text-[10px] font-black px-2 py-0.5 rounded uppercase">${tag}</span>
+              <span class="text-base font-black text-emerald-400">₹${r.fare} <span class="text-[10px] text-neutral-400">(${r.distanceKm} km)</span></span>
+            </div>
+            <div class="text-xs space-y-1">
+              <p class="text-white font-bold"><i class="fa-solid fa-user text-brandYellow mr-1.5"></i>${r.customerName} (${r.customerPhone})</p>
+              <p class="text-neutral-200"><i class="fa-solid fa-circle-dot text-emerald-400 mr-1.5"></i><strong>Pickup:</strong> ${r.pickup.address}</p>
+              <p class="text-neutral-200"><i class="fa-solid fa-location-dot text-rose-500 mr-1.5"></i><strong>Drop:</strong> ${r.drop.address}</p>
+              ${extraLine}
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-1">
+              <button onclick="driverSkipRide('${r.id}')" class="py-2.5 rounded-lg bg-neutral-800 text-neutral-300 font-bold text-xs">
+                Skip
+              </button>
+              <button onclick="driverAcceptRide('${r.id}')" class="col-span-2 py-2.5 rounded-lg bg-brandYellow text-neutral-950 font-black text-xs shadow">
+                ACCEPT RIDE (ভাড়া তুলুন)
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function driverSkipRide(rideId) {
+      skippedRideIds.add(rideId);
+      renderDriverRequests();
+    }
+
+    function driverAcceptRide(rideId) {
+      if (!currentDriverData) return;
+      if (getDriverActiveJob()) {
+        return showToast('আগে আপনার বর্তমান রাইডটি কমপ্লিট করুন!', 'error');
+      }
+
+      if (!isDriverSubscriptionValid(currentDriverData)) {
+        openSubscriptionModal();
+        return showToast('রাইড অ্যাকসেপ্ট করতে সাবস্ক্রিপশন প্রয়োজন!', 'error');
+      }
+
+      db.ref(`rides/${rideId}`).transaction((ride) => {
+        if (ride && ride.status === 'pending') {
+          ride.status = 'accepted';
+          ride.driverId = currentDriverData.id;
+          ride.driverName = currentDriverData.name;
+          ride.driverPhone = currentDriverData.phone;
+          ride.driverVehicle = currentDriverData.vehicleNumber;
+          ride.driverPhoto = currentDriverData.photoBase64 || '';
+          ride.acceptedAt = Date.now();
+          return ride;
+        }
+        return;
+      }, (err, committed) => {
+        if (committed) {
+          speakBengali('আপনি রাইডটি অ্যাকসেপ্ট করেছেন। পিকআপ ম্যাপ দেখে কাস্টমারের কাছে যান।');
+          showToast('Ride Accepted! Navigate to Pickup.', 'success');
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+              db.ref(`rides/${rideId}`).update({
+                driverLat: pos.coords.latitude,
+                driverLng: pos.coords.longitude
+              });
+            });
+          }
+        } else {
+          showToast('দুঃখিত, অন্য ড্রাইভার ইতিমধ্যে এই ভাড়াটি নিয়ে নিয়েছেন!', 'error');
+        }
+      });
+    }
+
+    function driverVerifyPickupOTP() {
+      const job = getDriverActiveJob();
+      if (!job) return;
+      const entered = document.getElementById('drv-otp-input').value.trim();
+      if (entered !== String(job.otp)) {
+        speakBengali('ভুল ওটিপি দিয়েছেন। সঠিক ওটিপি দিন।');
+        return showToast('ভুল OTP! কাস্টমারের কাছ থেকে সঠিক ৪-সংখ্যার কোডটি নিন।', 'error');
+      }
+      db.ref(`rides/${job.id}`).update({ status: 'started', startedAt: Date.now() });
+      document.getElementById('drv-otp-input').value = '';
+      speakBengali('ওটিপি ভেরিফাই সফল হয়েছে। যাত্রা শুরু করুন।');
+      showToast('OTP Verified! Trip Started.', 'success');
+    }
+
+    function driverCompleteDrop() {
+      const job = getDriverActiveJob();
+      if (!job) return;
+      const fare = Number(job.fare) || 0;
+
+      db.ref(`rides/${job.id}`).update({
+        status: 'completed',
+        completedAt: Date.now()
+      });
+
+      const newEarnings = Number(currentDriverData.earnings || 0) + fare;
+      const newTrips = Number(currentDriverData.tripsCount || 0) + 1;
+      db.ref(`drivers/${currentDriverData.id}`).update({
+        earnings: newEarnings,
+        tripsCount: newTrips
+      });
+
+      speakBengali(`ট্রিপ কমপ্লিট হয়েছে। মোট ভাড়া ${fare} টাকা সংগ্রহ করুন।`);
+      showCompletedFareScreen(fare, `${job.pickup.address} → ${job.drop.address}`);
+    }
+
+    function driverCancelActiveRide() {
+      const job = getDriverActiveJob();
+      if (!job) return;
+      db.ref(`rides/${job.id}`).update({ status: 'cancelled', cancelledBy: 'driver' });
+      speakBengali('রাইডটি বাতিল করা হয়েছে।');
+      showToast('Active Ride Cancelled', 'info');
+    }
+
+    function showCompletedFareScreen(fare, meta) {
+      document.getElementById('completed-fare-amount').textContent = `₹${fare}`;
+      document.getElementById('completed-ride-meta').textContent = meta;
+      document.getElementById('ride-completed-modal').classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // 8. DRIVER SUBSCRIPTION PAYMENT & WHATSAPP FLOW
+    // =========================================================================
+    function openSubscriptionModal() {
+      document.getElementById('sub-price-1d').textContent = `₹${appSettings.subPrices['1d']}`;
+      document.getElementById('sub-price-7d').textContent = `₹${appSettings.subPrices['7d']}`;
+      document.getElementById('sub-price-30d').textContent = `₹${appSettings.subPrices['30d']}`;
+      document.getElementById('sub-upi-id-text').textContent = appSettings.upiId || 'publiccab@upi';
+      if (appSettings.qrBase64) {
+        document.getElementById('sub-qr-img').src = appSettings.qrBase64;
+      }
+      selectSubPlan('1d');
+      document.getElementById('subscription-modal').classList.remove('hidden');
+    }
+
+    function selectSubPlan(plan) {
+      selectedSubPlan = plan;
+      ['1d', '7d', '30d'].forEach(p => {
+        const el = document.getElementById(`sub-plan-${p}`);
+        el.className = p === plan
+          ? 'sub-plan-btn border-2 border-brandYellow bg-brandYellow/15 rounded-xl p-2.5 text-center'
+          : 'sub-plan-btn border border-neutral-700 bg-neutral-900 rounded-xl p-2.5 text-center';
+      });
+    }
+
+    function copyUPIId() {
+      const text = document.getElementById('sub-upi-id-text').textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      showToast('UPI ID Copied!', 'success');
+    }
+
+    function submitDriverSubscription() {
+      if (!currentDriverData) return;
+      const utr = document.getElementById('sub-utr-input').value.trim();
+      if (!utr || utr.length < 6) {
+        return showToast('সঠিক পেমেন্ট UTR নম্বর দিন!', 'error');
+      }
+
+      const amount = appSettings.subPrices[selectedSubPlan];
+      const planLabel = selectedSubPlan === '1d' ? '1 Day' : selectedSubPlan === '7d' ? '7 Days' : '1 Month';
+      const reqId = 'sub_' + Date.now();
+
+      db.ref(`subscriptionRequests/${reqId}`).set({
+        id: reqId,
+        driverId: currentDriverData.id,
+        driverName: currentDriverData.name,
+        driverPhone: currentDriverData.phone,
+        vehicleNumber: currentDriverData.vehicleNumber,
+        plan: selectedSubPlan,
+        planLabel,
+        amount,
+        utr,
+        status: 'pending',
+        createdAt: Date.now()
+      });
+
+      speakBengali('হোয়াটসঅ্যাপে পেমেন্টের স্ক্রিনশটটি আপলোড করে সেন্ড করুন। ১০ মিনিটের মধ্যে আপনার আইডি অ্যাক্টিভেট হয়ে যাবে।');
+
+      const waPhone = (appSettings.adminWhatsApp || '917876482555').replace(/\D/g, '');
+      const msg = encodeURIComponent(
+        `Hello Public Cab Admin,\nDriver Name: ${currentDriverData.name}\nPhone: ${currentDriverData.phone}\nVehicle: ${currentDriverData.vehicleNumber}\nPlan: ${planLabel} (₹${amount})\nUTR Number: ${utr}\n\nI am attaching my payment screenshot below. Please activate my ID.`
+      );
+      closeModal('subscription-modal');
+      showToast('Opening WhatsApp... Send your payment screenshot!', 'success');
+      window.open(`https://wa.me/${waPhone}?text=${msg}`, '_blank');
+    }
+
+    // =========================================================================
+    // 9. 15-TAP HIDDEN ADMIN PANEL & PASSWORD (78764825555)
+    // =========================================================================
+    document.getElementById('brand-admin-trigger').addEventListener('click', () => {
+      brandTapCount++;
+      clearTimeout(brandTapTimer);
+      brandTapTimer = setTimeout(() => { brandTapCount = 0; }, 4500);
+
+      if (brandTapCount >= 15) {
+        brandTapCount = 0;
+        openAdminLoginModal();
+      }
+    });
+
+    function openAdminLoginModal() {
+      const inp = document.getElementById('admin-pass-input');
+      inp.value = '';
+      document.getElementById('admin-login-modal').classList.remove('hidden');
+      setTimeout(() => inp.focus(), 100);
+    }
+
+    function verifyAdminPassword() {
+      const pass = document.getElementById('admin-pass-input').value.trim();
+      if (pass === '78764825555') {
+        closeModal('admin-login-modal');
+        openAdminPanel();
+        speakBengali('অ্যাডমিন প্যানেল আনলক হয়েছে।');
+        showToast('Admin Panel Unlocked!', 'success');
+      } else {
+        speakBengali('ভুল পাসওয়ার্ড দিয়েছেন।');
+        showToast('Incorrect Admin Password!', 'error');
+      }
+    }
+
+    function openAdminPanel() {
+      populateAdminSettingsInputs();
+      renderAdminDashboard();
+      document.getElementById('admin-dashboard').classList.remove('hidden');
+    }
+
+    function switchAdminTab(tab) {
+      ['stats', 'drivers', 'rides', 'fares', 'subs', 'branding', 'customers'].forEach(t => {
+        document.getElementById(`admin-sec-${t}`).classList.toggle('hidden', t !== tab);
+        document.getElementById(`adm-tab-${t}`).className = t === tab
+          ? 'adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-brandYellow text-neutral-950 shrink-0'
+          : 'adm-tab px-3 py-1.5 rounded-lg text-xs font-extrabold bg-neutral-900 text-neutral-300 shrink-0';
+      });
+    }
+
+    function renderAdminDashboard() {
+      const driversArr = Object.values(allDrivers);
+      const customersArr = Object.values(allCustomers);
+      const ridesArr = Object.values(allRides);
+
+      document.getElementById('stat-total-customers').textContent = customersArr.length;
+      document.getElementById('stat-total-drivers').textContent = driversArr.length;
+
+      const now = Date.now();
+      const dayMs = 86400000;
+      const todayUsers = customersArr.filter(c => (now - (c.lastActive || 0)) < dayMs).length;
+      document.getElementById('stat-today-users').textContent = todayUsers;
+
+      let inc1d = 0, inc7d = 0, inc30d = 0, inc365d = 0, pendingAmt = 0;
+      ridesArr.forEach(r => {
+        const fare = Number(r.fare) || 0;
+        if (['pending', 'accepted', 'started'].includes(r.status)) {
+          pendingAmt += fare;
+        } else if (r.status === 'completed') {
+          const age = now - (r.completedAt || r.createdAt || now);
+          if (age <= dayMs) inc1d += fare;
+          if (age <= dayMs * 7) inc7d += fare;
+          if (age <= dayMs * 30) inc30d += fare;
+          if (age <= dayMs * 365) inc365d += fare;
+        }
+      });
+
+      document.getElementById('stat-pending-amount').textContent = `₹${pendingAmt}`;
+      document.getElementById('inc-1d').textContent = `₹${inc1d}`;
+      document.getElementById('inc-7d').textContent = `₹${inc7d}`;
+      document.getElementById('inc-30d').textContent = `₹${inc30d}`;
+      document.getElementById('inc-365d').textContent = `₹${inc365d}`;
+
+      const drvListEl = document.getElementById('admin-drivers-list');
+      if (!driversArr.length) {
+        drvListEl.innerHTML = `<p class="text-xs text-neutral-500 text-center py-8">No drivers registered yet.</p>`;
+      } else {
+        drvListEl.innerHTML = driversArr.sort((a, b) => b.createdAt - a.createdAt).map(d => {
+          const statusColor = d.status === 'approved' ? 'text-emerald-400 bg-emerald-500/15'
+            : d.status === 'suspended' ? 'text-rose-400 bg-rose-500/15'
+            : 'text-brandYellow bg-brandYellow/15';
+
+          return `
+            <div class="bg-cardBg border border-cardBorder rounded-2xl p-3.5 space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="text-[10px] font-black px-2 py-0.5 rounded uppercase ${statusColor}">${d.status}</span>
+                  <h4 class="font-extrabold text-sm text-white mt-1">${d.name}</h4>
+                  <p class="text-xs text-brandYellow font-bold">${(d.category || '').toUpperCase()} • ${d.vehicleNumber}</p>
+                  <p class="text-[11px] text-neutral-400">${d.phone} | ${d.address}</p>
+                </div>
+                <button onclick="downloadDriverPDF('${d.id}')" title="Download Driver PDF"
+                  class="bg-sky-500/20 border border-sky-500/40 text-sky-400 hover:bg-sky-500 hover:text-neutral-950 transition px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shrink-0">
+                  <i class="fa-solid fa-file-pdf"></i> PDF
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div onclick="zoomImage('${d.nidBase64}')" class="bg-neutral-900 rounded-xl p-1.5 cursor-pointer border border-neutral-800">
+                  <img src="${d.nidBase64}" class="w-full h-20 object-cover rounded-lg" />
+                  <p class="text-[10px] text-center text-neutral-400 mt-1"><i class="fa-solid fa-magnifying-glass-plus mr-1"></i>ID Card (Zoom)</p>
+                </div>
+                <div onclick="zoomImage('${d.photoBase64}')" class="bg-neutral-900 rounded-xl p-1.5 cursor-pointer border border-neutral-800">
+                  <img src="${d.photoBase64}" class="w-full h-20 object-cover rounded-lg" />
+                  <p class="text-[10px] text-center text-neutral-400 mt-1"><i class="fa-solid fa-magnifying-glass-plus mr-1"></i>Selfie (Zoom)</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 pt-1">
+                <button onclick="adminUpdateDriverStatus('${d.id}', 'approved')"
+                  class="py-2 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs">
+                  Approve
+                </button>
+                <button onclick="adminUpdateDriverStatus('${d.id}', 'suspended')"
+                  class="py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs">
+                  Suspend
+                </button>
+                <button onclick="adminDeleteDriver('${d.id}')"
+                  class="py-2 rounded-xl bg-rose-600/20 border border-rose-500/40 text-rose-400 font-bold text-xs">
+                  Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const activeRides = ridesArr.filter(r => ['pending', 'accepted', 'started'].includes(r.status));
+      const ridesEl = document.getElementById('admin-rides-list');
+      ridesEl.innerHTML = !activeRides.length
+        ? `<p class="text-xs text-neutral-500 text-center py-8">No live rides active right now.</p>`
+        : activeRides.map(r => `
+            <div class="bg-cardBg border border-cardBorder rounded-xl p-3 space-y-2 text-xs">
+              <div class="flex justify-between font-bold">
+                <span class="text-brandYellow uppercase">${r.category} (${r.status})</span>
+                <span class="text-emerald-400">₹${r.fare} (${r.distanceKm} km)</span>
+              </div>
+              <p class="text-neutral-300">Customer: ${r.customerName} (${r.customerPhone})</p>
+              <p class="text-neutral-400 truncate">From: ${r.pickup.address}</p>
+              <p class="text-neutral-400 truncate">To: ${r.drop.address}</p>
+              <button onclick="adminForceCancelRide('${r.id}')" class="w-full py-2 rounded-lg bg-rose-600 text-white font-bold">
+                Cancel Ride From Admin
+              </button>
+            </div>
+          `).join('');
+
+      const subReqs = Object.values(allSubRequests).filter(s => s.status === 'pending');
+      const subListEl = document.getElementById('adm-sub-requests-list');
+      subListEl.innerHTML = !subReqs.length
+        ? `<p class="text-xs text-neutral-500">No pending subscription UTR requests.</p>`
+        : subReqs.map(s => `
+            <div class="bg-neutral-900 border border-emerald-500/30 rounded-xl p-3 space-y-2 text-xs">
+              <div class="flex justify-between font-bold">
+                <span class="text-white">${s.driverName} (${s.vehicleNumber})</span>
+                <span class="text-brandYellow">${s.planLabel} • ₹${s.amount}</span>
+              </div>
+              <p class="text-neutral-400">Phone: ${s.driverPhone}</p>
+              <p class="text-emerald-400 font-mono font-bold bg-neutral-950 px-2 py-1 rounded">UTR: ${s.utr}</p>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="adminApproveSubscription('${s.id}')" class="py-2 rounded-lg bg-emerald-500 text-neutral-950 font-black">Verify & Activate</button>
+                <button onclick="db.ref('subscriptionRequests/${s.id}').update({status:'rejected'})" class="py-2 rounded-lg bg-rose-600/20 text-rose-400 font-bold">Reject</button>
+              </div>
+            </div>
+          `).join('');
+
+      const custListEl = document.getElementById('admin-customers-list');
+      custListEl.innerHTML = !customersArr.length
+        ? `<p class="text-xs text-neutral-500 text-center py-8">No customers yet.</p>`
+        : customersArr.map(c => `
+            <div class="bg-cardBg border border-cardBorder rounded-xl p-3 flex items-center justify-between text-xs">
+              <div>
+                <p class="font-extrabold text-white">${c.name}</p>
+                <p class="text-neutral-400">${c.phone}</p>
+              </div>
+              <a href="tel:${c.phone}" class="px-3 py-1.5 rounded-lg bg-neutral-800 text-brandYellow font-bold">Call</a>
+            </div>
+          `).join('');
+    }
+
+    function zoomImage(src) {
+      if (!src) return;
+      document.getElementById('zoomed-image-target').src = src;
+      document.getElementById('image-zoom-modal').classList.remove('hidden');
+    }
+
+    function adminUpdateDriverStatus(driverId, status) {
+      db.ref(`drivers/${driverId}`).update({ status });
+      speakBengali('ড্রাইভারের স্ট্যাটাস আপডেট করা হয়েছে।');
+      showToast(`Driver status updated to ${status.toUpperCase()}`, 'success');
+    }
+
+    function adminDeleteDriver(driverId) {
+      db.ref(`drivers/${driverId}`).remove();
+      showToast('Driver deleted permanently', 'info');
+    }
+
+    function adminForceCancelRide(rideId) {
+      db.ref(`rides/${rideId}`).update({ status: 'cancelled', cancelledBy: 'admin' });
+      showToast('Ride cancelled by Admin', 'info');
+    }
+
+    function adminApproveSubscription(reqId) {
+      const req = allSubRequests[reqId];
+      if (!req) return;
+      const days = req.plan === '1d' ? 1 : req.plan === '7d' ? 7 : 30;
+      const newExpiry = Date.now() + days * 86400000;
+
+      db.ref(`drivers/${req.driverId}`).update({ subExpiry: newExpiry });
+      db.ref(`subscriptionRequests/${reqId}`).update({ status: 'approved', approvedAt: Date.now() });
+      speakBengali('ড্রাইভারের সাবস্ক্রিপশন ভেরিফাই ও অ্যাক্টিভেট করা হয়েছে।');
+      showToast(`Subscription activated for ${req.driverName} (${days} days)!`, 'success');
+    }
+
+    function downloadDriverPDF(driverId) {
+      const d = allDrivers[driverId];
+      if (!d) return showToast('Driver data not found', 'error');
+      
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        return showToast('PDF library loading, please try again in 2 seconds.', 'error');
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFillColor(17, 17, 17);
+      doc.rect(0, 0, 210, 32, 'F');
+      doc.setTextColor(250, 204, 21);
+      doc.setFontSize(18);
+      doc.text('PUBLIC CAB - DRIVER VERIFICATION RECORD', 14, 21);
+
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(12);
+      doc.text(`Driver Name: ${d.name || 'N/A'}`, 14, 46);
+      doc.text(`Phone Number: ${d.phone || 'N/A'}`, 14, 55);
+      doc.text(`Vehicle Category: ${(d.category || 'N/A').toUpperCase()}`, 14, 64);
+      doc.text(`Vehicle Number: ${d.vehicleNumber || 'N/A'}`, 14, 73);
+      doc.text(`Address: ${d.address || 'N/A'}`, 14, 82);
+      doc.text(`Account Status: ${(d.status || 'PENDING').toUpperCase()}`, 14, 91);
+      doc.text(`Total Trips: ${d.tripsCount || 0} | Earnings: Rs. ${d.earnings || 0}`, 14, 100);
+
+      try {
+        if (d.photoBase64 && d.photoBase64.startsWith('data:image')) {
+          const imgFormat = d.photoBase64.includes('image/png') ? 'PNG' : 'JPEG';
+          doc.text('Driver Profile Photo:', 14, 115);
+          doc.addImage(d.photoBase64, imgFormat, 14, 120, 65, 65);
+        }
+        if (d.nidBase64 && d.nidBase64.startsWith('data:image')) {
+          const nidFormat = d.nidBase64.includes('image/png') ? 'PNG' : 'JPEG';
+          doc.text('National ID Card:', 105, 115);
+          doc.addImage(d.nidBase64, nidFormat, 105, 120, 85, 65);
+        }
+      } catch (e) {
+        console.warn('Image embed warning in PDF:', e);
+      }
+
+      const safeName = (d.name || 'Driver').replace(/[^a-zA-Z0-9]/g, '_');
+      doc.save(`PublicCab_Driver_${safeName}.pdf`);
+      showToast('Driver Details PDF Downloaded!', 'success');
+    }
+
+    function populateAdminSettingsInputs() {
+      document.getElementById('adm-is-24h').checked = !!appSettings.is24Hours;
+      document.getElementById('adm-open-time').value = appSettings.openTime || '06:00';
+      document.getElementById('adm-close-time').value = appSettings.closeTime || '22:00';
+      document.getElementById('adm-base-km').value = appSettings.baseKm || 3;
+
+      const faresBox = document.getElementById('adm-category-fares-inputs');
+      faresBox.innerHTML = VEHICLE_META.map(v => {
+        const f = appSettings.fares[v.id] || { base: v.defaultBase, perKm: v.defaultPerKm };
+        return `
+          <div class="bg-neutral-900 p-2.5 rounded-xl grid grid-cols-3 gap-2 items-center">
+            <span class="text-xs font-extrabold text-white">${v.name}</span>
+            <div>
+              <span class="text-[9px] text-neutral-400 block">Base Fare (₹)</span>
+              <input id="fare-base-${v.id}" type="number" value="${f.base}" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-brandYellow" />
+            </div>
+            <div>
+              <span class="text-[9px] text-neutral-400 block">Per KM (₹)</span>
+              <input id="fare-km-${v.id}" type="number" value="${f.perKm}" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-emerald-400" />
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('adm-sub-enabled').checked = !!appSettings.subEnabled;
+      document.getElementById('adm-sub-1d').value = appSettings.subPrices['1d'];
+      document.getElementById('adm-sub-7d').value = appSettings.subPrices['7d'];
+      document.getElementById('adm-sub-30d').value = appSettings.subPrices['30d'];
+      document.getElementById('adm-whatsapp-num').value = appSettings.adminWhatsApp || '';
+      document.getElementById('adm-upi-id').value = appSettings.upiId || '';
+
+      document.getElementById('adm-wa-booking-redirect').checked = appSettings.waBookingRedirect !== false;
+      document.getElementById('adm-ad-title').value = appSettings.adTitle || '';
+      document.getElementById('adm-ad-url').value = appSettings.adUrl || '';
+      VEHICLE_META.forEach(v => {
+        const inp = document.getElementById(`adm-wa-${v.id}`);
+        if (inp) inp.value = (appSettings.waGroups && appSettings.waGroups[v.id]) || '';
+      });
+    }
+
+    function saveAdminFaresAndHours() {
+      const updatedFares = {};
+      VEHICLE_META.forEach(v => {
+        updatedFares[v.id] = {
+          base: Number(document.getElementById(`fare-base-${v.id}`).value) || v.defaultBase,
+          perKm: Number(document.getElementById(`fare-km-${v.id}`).value) || v.defaultPerKm
+        };
+      });
+
+      db.ref('settings').update({
+        is24Hours: document.getElementById('adm-is-24h').checked,
+        openTime: document.getElementById('adm-open-time').value,
+        closeTime: document.getElementById('adm-close-time').value,
+        baseKm: Number(document.getElementById('adm-base-km').value) || 3,
+        fares: updatedFares
+      });
+      speakBengali('ভাড়ার তালিকা এবং সময়সূচী সেভ হয়েছে।');
+      showToast('Fares & Operating Hours Saved!', 'success');
+    }
+
+    function saveAdminSubscriptionSettings() {
+      db.ref('settings').update({
+        subEnabled: document.getElementById('adm-sub-enabled').checked,
+        subPrices: {
+          '1d': Number(document.getElementById('adm-sub-1d').value) || 29,
+          '7d': Number(document.getElementById('adm-sub-7d').value) || 149,
+          '30d': Number(document.getElementById('adm-sub-30d').value) || 499
+        },
+        adminWhatsApp: document.getElementById('adm-whatsapp-num').value.trim(),
+        upiId: document.getElementById('adm-upi-id').value.trim()
+      });
+      speakBengali('সাবস্ক্রিপশন সেটিংস সেভ হয়েছে।');
+      showToast('Subscription Settings Saved!', 'success');
+    }
+
+    function handleAdminImageUpload(input, settingKey) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = settingKey === 'adPosterBase64' ? 800 : 512;
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+            else { w = Math.round(w * maxDim / h); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const base64 = canvas.toDataURL('image/png');
+          db.ref(`settings/${settingKey}`).set(base64);
+          speakBengali('ছবি আপলোড সম্পন্ন হয়েছে।');
+          showToast('Image Uploaded & Synced Live!', 'success');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveAdminBrandingAndGroups() {
+      const waGroups = {};
+      VEHICLE_META.forEach(v => {
+        waGroups[v.id] = document.getElementById(`adm-wa-${v.id}`).value.trim();
+      });
+
+      db.ref('settings').update({
+        waBookingRedirect: document.getElementById('adm-wa-booking-redirect').checked,
+        adTitle: document.getElementById('adm-ad-title').value.trim(),
+        adUrl: document.getElementById('adm-ad-url').value.trim(),
+        waGroups
+      });
+      speakBengali('হোয়াটসঅ্যাপ পোর্টাল এবং ব্র্যান্ডিং সেটিংস আপডেট হয়েছে।');
+      showToast('WhatsApp Portal, Ads & Groups Updated!', 'success');
+    }
+
+    function clearAdBanner() {
+      db.ref('settings').update({ adPosterBase64: '', adTitle: '', adUrl: '' });
+      showToast('Ad Banner Removed', 'info');
+    }
+
+    // =========================================================================
+    // 10. NAVIGATION & UI HELPERS
+    // =========================================================================
+    function switchAppMode(mode) {
+      currentMode = mode;
+      const isCust = mode === 'customer';
+
+      document.getElementById('customer-mode-section').classList.toggle('hidden', !isCust);
+      document.getElementById('driver-mode-section').classList.toggle('hidden', isCust);
+      document.getElementById('bottom-nav').classList.toggle('hidden', !isCust);
+      document.getElementById('header-mode-subtitle').textContent = isCust ? 'Customer Mode' : 'Driver Mode';
+
+      document.getElementById('mode-btn-customer').className = isCust
+        ? 'px-3.5 py-1.5 rounded-full text-xs font-extrabold transition bg-brandYellow text-neutral-950'
+        : 'px-3.5 py-1.5 rounded-full text-xs font-extrabold transition text-neutral-200 hover:text-white';
+      document.getElementById('mode-btn-driver').className = !isCust
+        ? 'px-3.5 py-1.5 rounded-full text-xs font-extrabold transition bg-brandYellow text-neutral-950'
+        : 'px-3.5 py-1.5 rounded-full text-xs font-extrabold transition text-neutral-200 hover:text-white';
+
+      if (isCust) {
+        speakBengali('কাস্টমার মোড চালু হয়েছে।');
+        if (map) setTimeout(() => map.invalidateSize(), 150);
+      } else {
+        speakBengali('ড্রাইভার মোড চালু হয়েছে।');
+        renderDriverView();
+      }
+    }
+
+    function switchCustomerTab(tab) {
+      ['home', 'ambulance', 'parcel', 'services', 'support'].forEach(t => {
+        document.getElementById(`cust-tab-${t}`).classList.toggle('hidden', t !== tab);
+        const navBtn = document.getElementById(`nav-${t}`);
+        if (t === tab) {
+          navBtn.classList.add('text-brandYellow');
+          navBtn.classList.remove('text-neutral-400');
+        } else {
+          navBtn.classList.remove('text-brandYellow');
+          navBtn.classList.add('text-neutral-400');
+        }
+      });
+      if (tab === 'home' && map) {
+        setTimeout(() => map.invalidateSize(), 150);
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        success: 'bg-neutral-900 border-emerald-500 text-emerald-300',
+        error: 'bg-neutral-900 border-rose-500 text-rose-300',
+        info: 'bg-neutral-900 border-brandYellow text-brandYellow'
+      };
+      const el = document.createElement('div');
+      el.className = `border-l-4 ${colors[type]} px-3.5 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 transition-all`;
+      el.innerHTML = `<i class="fa-solid fa-bell"></i><span>${message}</span>`;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+
+    // =========================================================================
+    // 11. REAL-TIME FIREBASE LISTENERS & FAST STARTUP
+    // =========================================================================
+    function initFirebaseRealtimeListeners() {
+      db.ref('settings').on('value', (snap) => {
+        const val = snap.val();
+        if (val) {
+          appSettings = { ...appSettings, ...val };
+        }
+        updatePWAManifestAndIcons(appSettings.logoBase64);
+
+        const statusEl = document.getElementById('cab-service-status');
+        if (appSettings.is24Hours) {
+          statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span><span>Cab Service: Open 24 Hours</span>`;
+          statusEl.className = 'flex items-center gap-1.5 text-emerald-400';
+        } else {
+          const openNow = isCabServiceOpenNow();
+          statusEl.innerHTML = `<span class="w-2 h-2 rounded-full ${openNow ? 'bg-emerald-400' : 'bg-rose-500'} inline-block"></span><span>Cab: ${openNow ? 'Open' : 'Closed'} (${appSettings.openTime} - ${appSettings.closeTime})</span>`;
+          statusEl.className = `flex items-center gap-1.5 ${openNow ? 'text-emerald-400' : 'text-rose-400'}`;
+        }
+
+        const adBox = document.getElementById('customer-ad-banner');
+        if (appSettings.adPosterBase64 || appSettings.adUrl) {
+          adBox.classList.remove('hidden');
+          document.getElementById('ad-banner-link').href = appSettings.adUrl || '#';
+          document.getElementById('ad-banner-title').textContent = appSettings.adTitle || 'Special Offer';
+          const adImg = document.getElementById('ad-banner-img');
+          if (appSettings.adPosterBase64) {
+            adImg.src = appSettings.adPosterBase64;
+            adImg.classList.remove('hidden');
+          } else {
+            adImg.classList.add('hidden');
+          }
+        } else {
+          adBox.classList.add('hidden');
+        }
+
+        const waNum = (appSettings.adminWhatsApp || '917876482555').replace(/\D/g, '');
+        document.getElementById('support-whatsapp-btn').href = `https://wa.me/${waNum}`;
+
+        renderVehicleGrid();
+        renderDriverView();
+        renderAdminDashboard();
+      });
+
+      db.ref('rides').on('value', (snap) => {
+        const prevRides = { ...allRides };
+        allRides = snap.val() || {};
+
+        Object.values(allRides).forEach(r => {
+          if (!r) return;
+
+          // Notify Customer when Driver Accepts Ride
+          if (
+            r.customerId === customerProfile.id &&
+            r.status === 'accepted' &&
+            prevRides[r.id] &&
+            prevRides[r.id].status === 'pending'
+          ) {
+            speakBengali(`ড্রাইভার ${r.driverName || ''} আপনার বুকিং অ্যাকসেপ্ট করেছেন। গাড়ি নম্বর ${r.driverVehicle || ''}`);
+          }
+
+          // Notify Customer when Trip Completes (Both Apps Show Completed Screen)
+          if (
+            r.customerId === customerProfile.id &&
+            r.status === 'completed' &&
+            prevRides[r.id] &&
+            prevRides[r.id].status !== 'completed'
+          ) {
+            speakBengali(`আপনার যাত্রা সম্পন্ন হয়েছে। মোট ভাড়া ${r.fare} টাকা।`);
+            showCompletedFareScreen(r.fare, `${r.pickup.address} → ${r.drop.address}`);
+          }
+
+          // Notify Matching Category Driver Immediately When New Booking Arrives
+          if (
+            initialRidesLoaded &&
+            currentMode === 'driver' &&
+            driverIsOnline &&
+            currentDriverData &&
+            currentDriverData.status === 'approved' &&
+            r.status === 'pending' &&
+            !knownRideIds.has(r.id)
+          ) {
+            const myCat = (currentDriverData.category || '').toLowerCase().trim();
+            const rideCat = (r.category || '').toLowerCase().trim();
+            if (r.type === 'parcel' || rideCat === myCat) {
+              speakBengali(`নতুন ${r.type === 'parcel' ? 'পার্সেল' : myCat} বুকিং এসেছে! ভাড়া ${r.fare} টাকা।`);
+            }
+          }
+          knownRideIds.add(r.id);
+        });
+
+        initialRidesLoaded = true;
+        renderCustomerActiveRide();
+        renderDriverRequests();
+        renderAdminDashboard();
+      });
+
+      db.ref('drivers').on('value', (snap) => {
+        allDrivers = snap.val() || {};
+        renderDriverView();
+        renderAdminDashboard();
+      });
+
+      db.ref('customers').on('value', (snap) => {
+        allCustomers = snap.val() || {};
+        renderAdminDashboard();
+      });
+
+      db.ref('subscriptionRequests').on('value', (snap) => {
+        allSubRequests = snap.val() || {};
+        renderAdminDashboard();
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updatePWAManifestAndIcons('');
+      renderCustomerProfile();
+      renderVehicleGrid();
+      initMap();
+      initFirebaseRealtimeListeners();
+
+      // Fast 1.2s Splash Screen for Instant App Access
+      setTimeout(() => {
+        const splash = document.getElementById('company-splash-screen');
+        if (splash) {
+          splash.style.opacity = '0';
+          setTimeout(() => splash.classList.add('hidden'), 300);
+        }
+      }, 1200);
+
+      if (new URLSearchParams(window.location.search).get('admin') === '1') {
+        openAdminLoginModal();
+      }
+    });
+  </script>
+</body>
+</html>
